@@ -10,7 +10,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -35,8 +34,9 @@ def torch_allclose(x, y, rtol=1.e-5, atol=1.e-8):
     :param atol: (float) the absolute tolerance parameter
     :return: (bool) if x and y are all close
     """
-    x_tensor, y_tensor = x.detach().cpu().numpy(), y.detach().cpu().numpy()
-    return np.allclose(x_tensor, y_tensor, rtol=rtol, atol=atol)
+    import numpy as np
+    return np.allclose(x.detach().cpu().numpy(), y.detach().cpu().numpy(),
+                       rtol=rtol, atol=atol)
 
 
 def replicate_input(x):
@@ -208,6 +208,13 @@ def jacobian(model, x, output_class):
     torch.sum(scores[:, output_class]).backward()
 
     return xvar.grad.detach().clone()
+
+
+MNIST_MEAN = (0.1307,)
+MNIST_STD = (0.3081,)
+
+CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
+CIFAR10_STD = (0.2023, 0.1994, 0.2010)
 
 
 class NormalizeByChannelMeanStd(nn.Module):
