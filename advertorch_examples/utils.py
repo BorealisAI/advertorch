@@ -51,6 +51,18 @@ def bchw2bhwc(x):
         return np.moveaxis(x, 1, 3)
 
 
+def bhwc2bchw(x):
+    if isinstance(x, np.ndarray):
+        pass
+    else:
+        raise
+
+    if x.ndim == 3:
+        return np.moveaxis(x, 2, 0)
+    if x.ndim == 4:
+        return np.moveaxis(x, 3, 1)
+
+
 def _imshow(img):
     import matplotlib.pyplot as plt
     img = bchw2bhwc(img.detach().cpu().numpy())
