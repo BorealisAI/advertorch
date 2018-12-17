@@ -69,11 +69,9 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
                                ) - xvar.data
 
         elif ord == 2:
-            # XXX
-            assert isinstance(eps, float)
             grad = delta.grad.data
             grad = normalize_by_pnorm(grad)
-            delta.data = delta.data + eps_iter * grad
+            delta.data = delta.data + batch_multiply(eps_iter, grad)
             delta.data = clamp(xvar.data + delta.data, clip_min, clip_max
                                ) - xvar.data
             if eps is not None:
