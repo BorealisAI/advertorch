@@ -1,5 +1,5 @@
 # AdverTorch - A Toolbox for Adversarial Robustness Research based on PyTorch
-## Latest release (v0.0.1)
+## Latest release (v0.1.0)
 
 AdverTorch is a Python toolbox for adversarial robustness research. The primary functionalities are implemented in PyTorch.
 
@@ -9,6 +9,12 @@ AdverTorch is a Python toolbox for adversarial robustness research. The primary 
 ### Installing AdverTorch itself
 
 We developed AdverTorch under Python 3.6 and PyTorch 1.0.0 & 0.4.1. To install AdverTorch, simply run
+
+```
+pip install advertorch
+```
+
+or clone the repo and run
 ```
 python setup.py install
 ```
@@ -64,7 +70,6 @@ AdverTorch is still under active development. We will add the following features
 * support for other machine learning frameworks, e.g. TensorFlow
 * more attacks, defenses and other related functionalities
 * support for other Python versions and future PyTorch versions
-* pip installation through pypi.org
 * contributing guidelines
 * ...
 

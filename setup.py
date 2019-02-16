@@ -5,10 +5,17 @@
 # LICENSE file in the root directory of this source tree.
 #
 
+import os
 from setuptools import setup
 from setuptools import find_packages
 
 
+with open(os.path.join(os.path.dirname(__file__), 'advertorch/VERSION')) as f:
+    version = f.read().strip()
+
+
 setup(name='advertorch',
-      version='0.0.1',
+      version=version,
+      url='https://github.com/BorealisAI/advertorch',
+      include_package_data=True,
       packages=find_packages())

@@ -16,3 +16,5 @@ data/
 *.pt
 Untitled*ipynb
 git_stats
+build/
+dist/

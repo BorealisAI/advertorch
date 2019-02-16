@@ -1,0 +1,3 @@
+include tests/*.py
+include external_tests/*.py
+include advertorch/VERSION
