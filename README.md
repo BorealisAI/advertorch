@@ -1,5 +1,5 @@
 # AdverTorch - A Toolbox for Adversarial Robustness Research based on PyTorch
-## Latest release (v0.1.0)
+## Latest version (v0.1)
 
 AdverTorch is a Python toolbox for adversarial robustness research. The primary functionalities are implemented in PyTorch.
 
