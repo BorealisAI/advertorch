@@ -1,6 +1,6 @@
-<img src="/home/gavin/Dropbox/Work/advertorch/assets/logo.png?raw=true" alt="advertorch logo" width="200">
+<img src="https://raw.githubusercontent.com/borealisai/advertorch/master/assets/logo.png?raw=true" alt="advertorch logo" width="200">
 
-<img src="/home/gavin/Dropbox/Work/advertorch/assets/advertorch.png?raw=true" alt="advertorch text" width="100"> is a Python toolbox for adversarial robustness research. The primary functionalities are implemented in PyTorch.
+<img src="https://raw.githubusercontent.com/borealisai/advertorch/master/assets/advertorch.png?raw=true" alt="advertorch text" width="100"> is a Python toolbox for adversarial robustness research. The primary functionalities are implemented in PyTorch.
 
 
 #### Latest version (v0.1)
