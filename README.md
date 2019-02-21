@@ -7,9 +7,9 @@
 
 ## Installation
 
-### Installing advertorch itself
+### Installing AdverTorch itself
 
-We developed advertorch under Python 3.6 and PyTorch 1.0.0 & 0.4.1. To install advertorch, simply run
+We developed AdverTorch under Python 3.6 and PyTorch 1.0.0 & 0.4.1. To install AdverTorch, simply run
 
 ```
 pip install advertorch
@@ -61,7 +61,7 @@ For runnable examples see [`advertorch_examples/tutorial_attack_defense_bpda_mni
 
 ## Coming Soon
 
-advertorch is still under active development. We will add the following features/items down the road:
+AdverTorch is still under active development. We will add the following features/items down the road:
 
 * a blog post
 * more examples
@@ -84,11 +84,11 @@ This project is licensed under the LGPL. The terms and conditions can be found i
 
 ## Citation
 
-If you use advertorch in your research, we kindly ask that you cite the following [technical report](https://arxiv.org/abs/1902.07623):
+If you use AdverTorch in your research, we kindly ask that you cite the following [technical report](https://arxiv.org/abs/1902.07623):
 
 ```
 @article{ding2018advertorch,
-  title={advertorch v0.1: An Adversarial Robustness Toolbox based on PyTorch},
+  title={AdverTorch v0.1: An Adversarial Robustness Toolbox based on PyTorch},
   author={Ding, Gavin Weiguang and Wang, Luyu and Jin, Xiaomeng},
   journal={arXiv preprint arXiv:1902.07623},
   year={2019}
