@@ -1,14 +1,15 @@
-# AdverTorch - A Toolbox for Adversarial Robustness Research based on PyTorch
-## Latest version (v0.1)
+<img src="https://raw.githubusercontent.com/borealisai/advertorch/master/assets/logo.png?raw=true" alt="advertorch logo" width="200">
 
-AdverTorch is a Python toolbox for adversarial robustness research. The primary functionalities are implemented in PyTorch.
+<img src="https://raw.githubusercontent.com/borealisai/advertorch/master/assets/advertorch.png?raw=true" alt="advertorch text" width="100"> is a Python toolbox for adversarial robustness research. The primary functionalities are implemented in PyTorch.
 
+
+#### Latest version (v0.1)
 
 ## Installation
 
-### Installing AdverTorch itself
+### Installing advertorch itself
 
-We developed AdverTorch under Python 3.6 and PyTorch 1.0.0 & 0.4.1. To install AdverTorch, simply run
+We developed advertorch under Python 3.6 and PyTorch 1.0.0 & 0.4.1. To install advertorch, simply run
 
 ```
 pip install advertorch
@@ -60,9 +61,8 @@ For runnable examples see [`advertorch_examples/tutorial_attack_defense_bpda_mni
 
 ## Coming Soon
 
-AdverTorch is still under active development. We will add the following features/items down the road:
+advertorch is still under active development. We will add the following features/items down the road:
 
-* a technical report
 * a blog post
 * more examples
 * more complete documentation in the code
@@ -81,6 +81,19 @@ AdverTorch is still under active development. We will add the following features
 ## License
 
 This project is licensed under the LGPL. The terms and conditions can be found in the LICENSE and LICENSE.GPL files.
+
+## Citation
+
+If you use advertorch in your research, we kindly ask that you cite the following [technical report](https://arxiv.org/abs/1902.07623):
+
+```
+@article{ding2018advertorch,
+  title={advertorch v0.1: An Adversarial Robustness Toolbox based on PyTorch},
+  author={Ding, Gavin Weiguang and Wang, Luyu and Jin, Xiaomeng},
+  journal={arXiv preprint arXiv:1902.07623},
+  year={2019}
+}
+```
 
 
 ## Contributors
