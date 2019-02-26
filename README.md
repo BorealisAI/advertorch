@@ -88,7 +88,7 @@ If you use AdverTorch in your research, we kindly ask that you cite the followin
 
 ```
 @article{ding2018advertorch,
-  title={AdverTorch v0.1: An Adversarial Robustness Toolbox based on PyTorch},
+  title={{AdverTorch} v0.1: An Adversarial Robustness Toolbox based on PyTorch},
   author={Ding, Gavin Weiguang and Wang, Luyu and Jin, Xiaomeng},
   journal={arXiv preprint arXiv:1902.07623},
   year={2019}
