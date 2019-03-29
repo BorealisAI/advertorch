@@ -1,0 +1,15 @@
+language: python
+python:
+    - 3.6
+before_install:
+    - travis_wait travis_retry pip install torch
+    - travis_wait travis_retry pip install torchvision
+    - travis_wait travis_retry pip install tensorflow
+    - travis_wait travis_retry pip install scipy
+    - travis_wait travis_retry pip install foolbox==1.3.2
+    - travis_wait travis_retry pip install Keras==2.2.2
+    - travis_wait travis_retry pip install git+https://github.com/tensorflow/cleverhans.git@336b9f4ed95dccc7f0d12d338c2038c53786ab70
+install:
+    - pip install -e .
+script:
+    - pytest
