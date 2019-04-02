@@ -23,7 +23,17 @@ from .utils import is_successful
 
 
 class SinglePixelAttack(Attack, LabelMixin):
-    # Algorithm 1 in https://arxiv.org/pdf/1612.06299.pdf
+    """
+    Single Pixel Attack
+    Algorithm 1 in https://arxiv.org/pdf/1612.06299.pdf
+
+    :param predict: forward pass function.
+    :param max_pixels: max number of pixels to perturb.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param loss_fn: loss function
+    :param targeted: if the attack is targeted.   
+    """
 
     def __init__(self, predict, max_pixels=100, clip_min=0.,
                  loss_fn=None, clip_max=1., comply_with_foolbox=False,
@@ -70,19 +80,25 @@ class SinglePixelAttack(Attack, LabelMixin):
 
 
 class LocalSearchAttack(Attack, LabelMixin):
+    """
+    Local Search Attack
+    Algorithm 3 in https://arxiv.org/pdf/1612.06299.pdf
+
+    :param predict: forward pass function.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param p: parameter controls pixel complexity
+    :param r: perturbation value
+    :param loss_fn: loss function
+    :param d: the half side length of the neighbourhood square
+    :param t: the number of pixels perturbed at each round
+    :param k: the threshold for k-misclassification
+    :param round_ub: an upper bound on the number of rounds
+    """
 
     def __init__(self, predict, clip_min=0., clip_max=1., p=1., r=1.5,
                  loss_fn=None, d=5, t=5, k=1, round_ub=10, seed_ratio=0.1,
                  max_nb_seeds=128, comply_with_foolbox=False, targeted=False):
-        """
-        Algorithm 3 in https://arxiv.org/pdf/1612.06299.pdf
-        p: parameter controls pixel complexity
-        r: perturbation value
-        d: the half side length of the neighbourhood square
-        t: the number of pixels perturbed at each round
-        k: the threshold for k-misclassification
-        round_ub: an upper bound on the number of rounds
-        """
         super(LocalSearchAttack, self).__init__(
             predict=predict, clip_max=clip_max,
             clip_min=clip_min, loss_fn=None)

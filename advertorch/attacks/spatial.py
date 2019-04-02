@@ -28,7 +28,21 @@ INVALID_LABEL = -1
 
 
 class SpatialTransformAttack(Attack, LabelMixin):
+    """
+    Sptially Transformed Attack
 
+    :param predict: forward pass function.
+    :param num_classes: number of clasess.
+    :param confidence: confidence of the adversarial examples.
+    :param initial_const: initial value of the constant c
+    :param max_iterations: the maximum number of iterations
+    :param search_steps: number of search times to find the optimum
+    :param loss_fn: loss function
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param abort_early: if set to true, abort early if getting stuck in local min
+    :param targeted: if the attack is targeted  
+    """
 
     def __init__(self, predict, num_classes, confidence=0,
                  initial_const=1, max_iterations=1000,

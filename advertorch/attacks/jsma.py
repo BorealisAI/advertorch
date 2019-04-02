@@ -22,14 +22,24 @@ from .base import LabelMixin
 
 
 class JacobianSaliencyMapAttack(Attack, LabelMixin):
+    """
+    Jacobian Saliency Map Attack
+    This includes Algorithm 1 and 3 in v1
+
+    :param predict: forward pass function.
+    :param num_classes: number of clasess.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param gamma: highest percentage of pixels can be modified
+    :param theta: perturb length, range is either [theta, 0], [0, theta]
+
+    """
 
     def __init__(self, predict, num_classes,
                  clip_min=0.0, clip_max=1.0, loss_fn=None,
                  theta=1.0, gamma=1.0, comply_cleverhans=False):
-        """https://arxiv.org/abs/1511.07528
-        This includes Algorithm 1 and 3 in v1.
-        theta perturb length, range is either [theta, 0], [0, theta]
-        gamma highest percentage of pixels can be modified
+        """
+        https://arxiv.org/abs/1511.07528
         """
         super(JacobianSaliencyMapAttack, self).__init__(
             predict, loss_fn, clip_min, clip_max)

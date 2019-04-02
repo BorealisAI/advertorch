@@ -16,6 +16,12 @@ from .base import Processor
 
 
 class MedianSmoothing2D(Processor):
+    """
+    Median Smoothing 2D.
+
+    :param kernel_size: aperture linear size; must be odd and greater than 1.
+    :param stride: stride of the convolution.
+    """
 
     def __init__(self, kernel_size=3, stride=1):
         super(MedianSmoothing2D, self).__init__()
@@ -39,6 +45,11 @@ class MedianSmoothing2D(Processor):
 
 
 class ConvSmoothing2D(Processor):
+    """
+    Conv Smoothing 2D.
+
+    :param kernel_size: size of the convolving kernel.
+    """
 
     def __init__(self, kernel):
         super(ConvSmoothing2D, self).__init__()
@@ -49,6 +60,13 @@ class ConvSmoothing2D(Processor):
 
 
 class GaussianSmoothing2D(ConvSmoothing2D):
+    """
+    Gaussian Smoothing 2D.
+    
+    :param sigma: sigma of the Gaussian.
+    :param channels: number of channels in the output.
+    :param kernel_size: aperture size.
+    """
 
     def __init__(self, sigma, channels, kernel_size=None):
         kernel = _generate_gaussian_kernel(sigma, channels, kernel_size)
@@ -56,6 +74,12 @@ class GaussianSmoothing2D(ConvSmoothing2D):
 
 
 class AverageSmoothing2D(ConvSmoothing2D):
+    """
+    Average Smoothing 2D.
+
+    :param channels: number of channels in the output.
+    :param kernel_size: aperture size.
+    """
 
     def __init__(self, channels, kernel_size):
         kernel = torch.ones((channels, 1, kernel_size, kernel_size)) / (

@@ -59,12 +59,16 @@ def _create_backward_from_forwardsub(forwardsub):
 
 
 class BPDAWrapper(nn.Module):
+    """
+    Wrap forward module with BPDA backward path
+    If forwardsub is not None, then ignore backward
+
+    :param forwardsub: substitute forward function for BPDA
+    :param backward: substitute backward function for BPDA
+    """
 
     def __init__(self, forward, forwardsub=None, backward=None):
-        """Wrap forward module with BPDA backward path
-        forwardsub: substitute forward function for BPDA
-        If forwardsub is not None, then ignore backward
-
+        """
         Here we assume forward and forwardsub only takes one input x
         and backward takes two inputs grad_output and x
         TODO: adding assert for this, tried inspect.getargspec, but doesn't

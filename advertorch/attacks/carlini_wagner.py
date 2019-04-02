@@ -38,6 +38,25 @@ NUM_CHECKS = 10
 
 
 class CarliniWagnerL2Attack(Attack, LabelMixin):
+    """
+    Carlini, Nicholas, and David Wagner "Towards evaluating the
+    robustness of neural networks" 2017 IEEE Symposium on Security and
+    Privacy (SP) IEEE, 2017.
+    https://arxiv.org/abs/1608.04644
+
+    :param predict: forward pass function.
+    :param num_classes: number of clasess.
+    :param confidence: confidence of the adversarial examples.
+    :param targeted: TODO
+    :param learning_rate: the learning rate for the attack algorithm
+    :param binary_search_steps: number of binary search times to find the optimum
+    :param max_iterations: the maximum number of iterations
+    :param abort_early: if set to true, abort early if getting stuck in local min
+    :param initial_const: initial value of the constant c
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param loss_fn: loss function
+    """
 
     def __init__(self, predict, num_classes, confidence=0,
                  targeted=False, learning_rate=0.01,
@@ -46,18 +65,6 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
                  clip_min=0., clip_max=1., loss_fn=None):
         """
         Carlini Wagner L2 Attack implementation in pytorch
-
-        Carlini, Nicholas, and David Wagner. "Towards evaluating the
-        robustness of neural networks." 2017 IEEE Symposium on Security and
-        Privacy (SP). IEEE, 2017.
-        https://arxiv.org/abs/1608.04644
-
-        learning_rate: the learning rate for the attack algorithm
-        max_iterations: the maximum number of iterations
-        binary_search_steps: number of binary search times to find the optimum
-        abort_early: if set to true, abort early if getting stuck in local min
-        confidence: confidence of the adversarial examples
-        targeted: TODO
         """
 
         if loss_fn is not None:

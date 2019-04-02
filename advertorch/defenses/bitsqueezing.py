@@ -11,6 +11,13 @@ from .base import Processor
 
 
 class BitSqueezing(Processor):
+    """
+    Bit Squeezing.
+
+    :param bit_depth: bit depth.
+    :param vmin: min value.
+    :param vmax: max value.
+    """
 
     def __init__(self, bit_depth, vmin=0., vmax=1.):
         super(BitSqueezing, self).__init__()
@@ -27,6 +34,12 @@ class BitSqueezing(Processor):
 
 
 class BinaryFilter(BitSqueezing):
+    """
+    Binary Filter.
+
+    :param vmin: min value.
+    :param vmax: max value.
+    """
 
     def __init__(self, vmin=0., vmax=1.):
         super(BinaryFilter, self).__init__(bit_depth=1, vmin=vmin, vmax=vmax)

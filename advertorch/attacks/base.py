@@ -13,17 +13,22 @@ from advertorch.utils import replicate_input
 
 
 class Attack(object):
-    """Abstract base class for all attack classes."""
+    """
+    Abstract base class for all attack classes.
+    
+    :param predict: forward pass function.
+    :param loss_fn: loss function that takes .
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+
+    """
 
     __metaclass__ = ABCMeta
 
     def __init__(self, predict, loss_fn, clip_min, clip_max):
         """
         Create an Attack instance.
-        :param predict: forward pass function.
-        :param loss_fn: loss function that takes .
-        :param clip_min: mininum value per input dimension.
-        :param clip_max: maximum value per input dimension.
+
         """
         self.predict = predict
         self.loss_fn = loss_fn

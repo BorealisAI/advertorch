@@ -11,7 +11,11 @@ from .base import Processor
 
 
 class JPEGFilter(Processor):
+    """
+    JPEG Filter.
 
+    :param quality: quality of the output.
+    """
     def __init__(self, quality=75):
         super(JPEGFilter, self).__init__()
         self.quality = quality
