@@ -19,3 +19,4 @@ git_stats
 build/
 dist/
 _build/
+_tutorials/
