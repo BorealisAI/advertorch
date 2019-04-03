@@ -13,10 +13,9 @@ Welcome to Advertorch
 
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorial
+   :caption: Tutorials
 
-   tutorial/tutorial_attack_defense_bpda_mnist
-
+   _tutorials/tutorial_attack_defense_bpda_mnist
 
 
 .. toctree::
