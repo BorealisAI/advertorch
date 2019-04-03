@@ -1,10 +1,10 @@
 :mod:`advertorch.bpda`
-=====================
+======================
 
 .. automodule:: advertorch.bpda
 
-Attacks
-------
+BPDA
+----
 
 .. autosummary::
    :nosignatures:

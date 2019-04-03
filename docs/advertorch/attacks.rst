@@ -1,10 +1,10 @@
 :mod:`advertorch.attacks`
-=====================
+=========================
 
 .. automodule:: advertorch.attacks
 
 Attacks
-------
+-------
 
 .. autosummary::
    :nosignatures:

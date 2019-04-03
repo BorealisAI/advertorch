@@ -1,5 +1,5 @@
 :mod:`advertorch.defenses`
-=========================
+==========================
 
 .. automodule:: advertorch.defenses
 

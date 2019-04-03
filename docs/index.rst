@@ -1,5 +1,5 @@
 Welcome to Advertorch
-===================
+=====================
 
 
 .. image:: ../assets/logo.png
