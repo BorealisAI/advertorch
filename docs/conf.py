@@ -43,11 +43,12 @@ autodoc_mock_imports = [
 'torch.utils.data',
 'randomstate',
 'scipy._lib',
+'advertorch',
 ]
 
 # import torch
 # import torch.nn
-import advertorch
+# import advertorch
 # from advertorch import attacks
 # from advertorch import defenses
 # import advertorch.attacks
