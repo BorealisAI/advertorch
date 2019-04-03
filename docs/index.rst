@@ -1,8 +1,11 @@
 Welcome to Advertorch
 =====================
 
+.. comments original size: 626*238
 
 .. image:: ../assets/logo.png
+   :width: 313px
+   :height: 119px
 
 .. toctree::
    :maxdepth: 2
