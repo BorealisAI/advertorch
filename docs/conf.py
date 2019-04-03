@@ -20,30 +20,57 @@ import sys
 sys.path.insert(0, os.path.abspath('..'))
 
 
-autodoc_mock_imports = [
-'numpy',
-'numpy.linalg',
-'scipy',
-'scipy.optimize',
-'scipy.interpolate',
-'scipy.ndimage',
-'scipy.ndimage.filters',
-'tensorflow',
-'theano',
-'theano.tensor',
-'torch',
-'torch.nn',
-'torch.nn.functional',
-'torch.optim',
-'torch.nn.modules',
-'torch.nn.modules.utils',
-'torch.utils',
-'torch.utils.model_zoo',
-'torch.nn.init',
-'torch.utils.data',
-'randomstate',
-'scipy._lib',
-]
+# autodoc_mock_imports = [
+# 'numpy',
+# 'numpy.linalg',
+# 'scipy',
+# 'scipy.optimize',
+# 'scipy.interpolate',
+# 'scipy.ndimage',
+# 'scipy.ndimage.filters',
+# 'tensorflow',
+# 'theano',
+# 'theano.tensor',
+# # 'torch',
+# 'torch.nn',
+# 'torch.nn.functional',
+# 'torch.optim',
+# 'torch.nn.modules',
+# 'torch.nn.modules.utils',
+# 'torch.utils',
+# 'torch.utils.model_zoo',
+# 'torch.nn.init',
+# 'torch.utils.data',
+# 'randomstate',
+# 'scipy._lib',
+# ]
+
+from unittest.mock import Mock
+# from sphinx.ext.autodoc.importer import _MockObject as Mock
+Mock.Module = object
+sys.modules['torch'] = Mock()
+sys.modules['numpy'] = Mock()
+sys.modules['numpy.linalg'] = Mock()
+sys.modules['scipy'] = Mock()
+sys.modules['scipy.optimize'] = Mock()
+sys.modules['scipy.interpolate'] = Mock()
+sys.modules['scipy.ndimage'] = Mock()
+sys.modules['scipy.ndimage.filters'] = Mock()
+sys.modules['tensorflow'] = Mock()
+sys.modules['theano'] = Mock()
+sys.modules['theano.tensor'] = Mock()
+sys.modules['torch'] = Mock()
+sys.modules['torch.nn'] = Mock()
+sys.modules['torch.nn.functional'] = Mock()
+sys.modules['torch.optim'] = Mock()
+sys.modules['torch.nn.modules'] = Mock()
+sys.modules['torch.nn.modules.utils'] = Mock()
+sys.modules['torch.utils'] = Mock()
+sys.modules['torch.utils.model_zoo'] = Mock()
+sys.modules['torch.nn.init'] = Mock()
+sys.modules['torch.utils.data'] = Mock()
+sys.modules['randomstate'] = Mock()
+sys.modules['scipy._lib'] = Mock()
 
 # import torch
 # import torch.nn
