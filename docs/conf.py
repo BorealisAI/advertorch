@@ -17,7 +17,8 @@
 # sys.path.insert(0, os.path.abspath('.'))
 import os
 import shutil
-shutil.rmtree("_tutorials")
+if os.path.exists("_tutorials"):
+    shutil.rmtree("_tutorials")
 os.makedirs("_tutorials")
 os.symlink("../../advertorch_examples/tutorial_attack_defense_bpda_mnist.ipynb",
     "_tutorials/tutorial_attack_defense_bpda_mnist.ipynb")
