@@ -17,7 +17,7 @@
 # sys.path.insert(0, os.path.abspath('.'))
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../..'))
 
 
 autodoc_mock_imports = [
@@ -45,9 +45,6 @@ autodoc_mock_imports = [
 'scipy._lib',
 ]
 
-# from unittest.mock import Mock
-
-# sys.modules['torch'] = Mock()
 # import torch
 # import torch.nn
 import advertorch
