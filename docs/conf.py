@@ -17,7 +17,7 @@
 # sys.path.insert(0, os.path.abspath('.'))
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath('..'))
 
 
 autodoc_mock_imports = [
@@ -48,6 +48,7 @@ autodoc_mock_imports = [
 # import torch
 # import torch.nn
 import advertorch
+# raise
 # from advertorch import attacks
 # from advertorch import defenses
 # import advertorch.attacks
