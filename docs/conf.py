@@ -69,6 +69,7 @@ sys.modules['torch.utils'] = Mock()
 sys.modules['torch.utils.model_zoo'] = Mock()
 sys.modules['torch.nn.init'] = Mock()
 sys.modules['torch.utils.data'] = Mock()
+sys.modules['torchvision'] = Mock()
 sys.modules['randomstate'] = Mock()
 sys.modules['scipy._lib'] = Mock()
 
