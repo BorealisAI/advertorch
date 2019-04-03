@@ -7,6 +7,8 @@
 
 # flake8: noqa
 
+import numpy as np
+
 from .base import Attack
 from .base import LabelMixin
 
