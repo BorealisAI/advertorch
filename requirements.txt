@@ -1,3 +1,4 @@
+torch
 tensorflow
 git+https://github.com/tensorflow/cleverhans.git@336b9f4ed95dccc7f0d12d338c2038c53786ab70
 Keras==2.2.2
