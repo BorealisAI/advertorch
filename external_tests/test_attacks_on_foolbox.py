@@ -44,7 +44,7 @@ img_batch, label_batch = data_iter.next()
 model = MLP()
 model.eval()
 model.load_state_dict(
-    torch.load(os.path.join(TRAINED_MODEL_PATH, 'mlp.pkl')))
+    torch.load(os.path.join(TRAINED_MODEL_PATH, 'mlp.pkl'), map_location='cpu'))
 model.to("cpu")
 
 # foolbox single pixel attack do not succeed on this model

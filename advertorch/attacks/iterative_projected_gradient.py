@@ -39,13 +39,14 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
     :param predict: forward pass function.
     :param nb_iter: number of iterations.
     :param eps: maximum distortion.
-    :param eps_iter: attack step size per iteration.
+    :param eps_iter: attack step size.
     :param loss_fn: loss function.
     :param delta_init: (optional) tensor contains the random initialization.
     :param minimize: (optional bool) whether to minimize or maximize the loss.
     :param ord: (optional) the order of maximum distortion (inf or 2).
-    :param clip_min: (optional float) mininum value per input dimension.
-    :param clip_max: (optional float) maximum value per input dimension.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+
     :return: tensor containing the perturbed input.
     """
     if delta_init is not None:
@@ -86,15 +87,24 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
     return x_adv
 
 
-
 class PGDAttack(Attack, LabelMixin):
     """
-    The projected gradient descent attack (Madry et al. 2017).
+    The projected gradient descent attack (Madry et al, 2017).
     The attack performs nb_iter steps of size eps_iter, while always staying
     within eps from the initial point.
     Paper: https://arxiv.org/pdf/1706.06083.pdf
-    """
 
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations.
+    :param eps_iter: attack step size.
+    :param rand_init: (optional bool) random initialization.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param ord: (optional) the order of maximum distortion (inf or 2).
+    :param targeted: if the attack is targeted.
+    """
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
@@ -102,16 +112,6 @@ class PGDAttack(Attack, LabelMixin):
         """
         Create an instance of the PGDAttack.
 
-        :param predict: forward pass function.
-        :param loss_fn: loss function.
-        :param eps: maximum distortion.
-        :param nb_iter: number of iterations
-        :param eps_iter: attack step size.
-        :param rand_init: (optional bool) random initialization.
-        :param clip_min: mininum value per input dimension.
-        :param clip_max: maximum value per input dimension.
-        :param ord: norm type of the norm constraints
-        :param targeted: if the attack is targeted
         """
         super(PGDAttack, self).__init__(
             predict, loss_fn, clip_min, clip_max)
@@ -160,6 +160,19 @@ class PGDAttack(Attack, LabelMixin):
 
 
 class LinfPGDAttack(PGDAttack):
+    """
+    PGD Attack with order=Linf
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations.
+    :param eps_iter: attack step size.
+    :param rand_init: (optional bool) random initialization.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    """
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
@@ -171,6 +184,19 @@ class LinfPGDAttack(PGDAttack):
 
 
 class L2PGDAttack(PGDAttack):
+    """
+    PGD Attack with order=L2
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations.
+    :param eps_iter: attack step size.
+    :param rand_init: (optional bool) random initialization.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    """
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
@@ -182,7 +208,17 @@ class L2PGDAttack(PGDAttack):
 
 
 class L2BasicIterativeAttack(PGDAttack):
-    """Like GradientAttack but with several steps for each epsilon."""
+    """Like GradientAttack but with several steps for each epsilon.
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations.
+    :param eps_iter: attack step size.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    """
 
     def __init__(self, predict, loss_fn=None, eps=0.1, nb_iter=10,
                  eps_iter=0.05, clip_min=0., clip_max=1., targeted=False):
@@ -198,6 +234,16 @@ class LinfBasicIterativeAttack(PGDAttack):
     Like GradientSignAttack but with several steps for each epsilon.
     Aka Basic Iterative Attack.
     Paper: https://arxiv.org/pdf/1611.01236.pdf
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations.
+    :param eps_iter: attack step size.
+    :param rand_init: (optional bool) random initialization.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
     """
 
     def __init__(self, predict, loss_fn=None, eps=0.1, nb_iter=10,
@@ -216,23 +262,25 @@ class MomentumIterativeAttack(Attack, LabelMixin):
     within eps from the initial point. The optimization is performed with
     momentum.
     Paper: https://arxiv.org/pdf/1710.06081.pdf
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations
+    :param decay_factor: momentum decay factor.
+    :param eps_iter: attack step size.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    :param ord: (optional) the order of maximum distortion (inf or 2).
     """
 
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40, decay_factor=1.,
-            eps_iter=0.01, clip_min=0., clip_max=1., targeted=False):
+            eps_iter=0.01, clip_min=0., clip_max=1., targeted=False, ord=np.inf):
         """
         Create an instance of the MomentumIterativeAttack.
 
-        :param predict: forward pass function.
-        :param loss_fn: loss function.
-        :param eps: maximum distortion.
-        :param nb_iter: number of iterations
-        :param decay_factor: momentum decay factor.
-        :param eps_iter: attack step size.
-        :param clip_min: mininum value per input dimension.
-        :param clip_max: maximum value per input dimension.
-        :param targeted: if the attack is targeted.
         """
         super(MomentumIterativeAttack, self).__init__(
             predict, loss_fn, clip_min, clip_max)
@@ -241,6 +289,7 @@ class MomentumIterativeAttack(Attack, LabelMixin):
         self.decay_factor = decay_factor
         self.eps_iter = eps_iter
         self.targeted = targeted
+        self.ord = ord
         if self.loss_fn is None:
             self.loss_fn = nn.CrossEntropyLoss(reduction="sum")
 
@@ -281,17 +330,83 @@ class MomentumIterativeAttack(Attack, LabelMixin):
             # according to the paper it should be .sum(), but in their
             #   implementations (both cleverhans and the link from the paper)
             #   it is .mean(), but actually it shouldn't matter
-
-            delta.data += self.eps_iter * torch.sign(g)
-            # delta.data += self.eps / self.nb_iter * torch.sign(g)
-
-            delta.data = clamp(
-                delta.data, min=-self.eps, max=self.eps)
-            delta.data = clamp(
-                x + delta.data, min=self.clip_min, max=self.clip_max) - x
+            if self.ord == np.inf:
+                delta.data += self.eps_iter * torch.sign(g)
+                delta.data = clamp(
+                    delta.data, min=-self.eps, max=self.eps)
+                delta.data = clamp(
+                    x + delta.data, min=self.clip_min, max=self.clip_max) - x
+            elif self.ord == 2:
+                delta.data += self.eps_iter * normalize_by_pnorm(g, p=2)
+                delta.data *= clamp(
+                    (self.eps * normalize_by_pnorm(delta.data, p=2) / delta.data),
+                    max=1.)
+                delta.data = clamp(
+                    x + delta.data, min=self.clip_min, max=self.clip_max) - x
+            else:
+                error = "Only ord = inf and ord = 2 have been implemented"
+                raise NotImplementedError(error)
 
         rval = x + delta.data
         return rval
+
+
+class L2MomentumIterativeAttack(MomentumIterativeAttack):
+    """
+    The L2 Momentum Iterative Attack
+    Paper: https://arxiv.org/pdf/1710.06081.pdf
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations
+    :param decay_factor: momentum decay factor.
+    :param eps_iter: attack step size.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    """
+    def __init__(
+            self, predict, loss_fn=None, eps=0.3, nb_iter=40, decay_factor=1.,
+            eps_iter=0.01, clip_min=0., clip_max=1., targeted=False):
+        """
+        Create an instance of the MomentumIterativeAttack.
+
+        """
+        ord = 2
+        super(L2MomentumIterativeAttack, self).__init__(
+            predict, loss_fn, eps, nb_iter, decay_factor,
+            eps_iter, clip_min, clip_max, targeted, ord)
+
+
+class LinfMomentumIterativeAttack(MomentumIterativeAttack):
+    """
+    The Linf Momentum Iterative Attack
+    Paper: https://arxiv.org/pdf/1710.06081.pdf
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations
+    :param decay_factor: momentum decay factor.
+    :param eps_iter: attack step size.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    """
+    def __init__(
+            self, predict, loss_fn=None, eps=0.3, nb_iter=40, decay_factor=1.,
+            eps_iter=0.01, clip_min=0., clip_max=1., targeted=False):
+        """
+        Create an instance of the MomentumIterativeAttack.
+
+        """
+        ord = np.inf
+        super(LinfMomentumIterativeAttack, self).__init__(
+            predict, loss_fn, eps, nb_iter, decay_factor,
+            eps_iter, clip_min, clip_max, targeted, ord)
+
+
 
 
 class FastFeatureAttack(Attack):
@@ -299,20 +414,20 @@ class FastFeatureAttack(Attack):
     Fast attack against a target internal representation of a model using
     gradient descent (Sabour et al. 2016).
     Paper: https://arxiv.org/abs/1511.05122
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param eps_iter: attack step size.
+    :param nb_iter: number of iterations
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
     """
 
     def __init__(self, predict, loss_fn=None, eps=0.3, eps_iter=0.05,
                  nb_iter=10, rand_init=True, clip_min=0., clip_max=1.):
         """
         Create an instance of the FastFeatureAttack.
-
-        :param predict: forward pass function.
-        :param loss_fn: loss function.
-        :param eps: maximum distortion.
-        :param eps_iter: attack step size.
-        :param nb_iter: number of iterations
-        :param clip_min: mininum value per input dimension.
-        :param clip_max: maximum value per input dimension.
         """
         super(FastFeatureAttack, self).__init__(
             predict, loss_fn, clip_min, clip_max)
