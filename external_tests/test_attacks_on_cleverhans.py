@@ -358,11 +358,9 @@ def compare_attacks(key, item, targeted=False):
     cl_kwargs = merge2dicts(item["kwargs"], item["cl_kwargs"])
     at_kwargs = merge2dicts(item["kwargs"], item["at_kwargs"])
     thresholds = item["thresholds"]
-    seed = 66666
+    seed = 6666
     torch.manual_seed(seed)
     np.random.seed(seed)
-    random.seed(seed)
-    tf.random.set_random_seed(seed)
 
     # WARNING: don't use tf.InteractiveSession() here
     # It causes that fastfeature attack has to be the last test for some reason
