@@ -11,6 +11,7 @@ from __future__ import print_function
 
 import warnings
 import pytest
+import random
 
 import numpy as np
 import torch
@@ -31,7 +32,8 @@ from cleverhans.attacks import SaliencyMapMethod
 from advertorch.attacks import CarliniWagnerL2Attack
 from advertorch.attacks import GradientAttack
 from advertorch.attacks import GradientSignAttack
-from advertorch.attacks import MomentumIterativeAttack
+from advertorch.attacks import L2MomentumIterativeAttack
+from advertorch.attacks import LinfMomentumIterativeAttack
 from advertorch.attacks import LinfPGDAttack
 from advertorch.attacks import FastFeatureAttack
 from advertorch.attacks import LinfBasicIterativeAttack
@@ -53,11 +55,14 @@ RTOL = 1e-4
 NB_ITER = 5
 
 # XXX: carlini still doesn't pass sometimes under certain random seed
-seed = 6666
+seed = 66666
 torch.manual_seed(seed)
 np.random.seed(seed)
+random.seed(seed)
+tf.random.set_random_seed(seed)
 inputs = np.random.uniform(0, 1, size=(BATCH_SIZE, DIM_INPUT))
 targets = np.random.randint(0, NUM_CLASS, size=BATCH_SIZE)
+
 
 targets_onehot = np.zeros((BATCH_SIZE, NUM_CLASS), dtype='int')
 targets_onehot[np.arange(BATCH_SIZE), targets] = 1
@@ -119,7 +124,7 @@ attack_kwargs = {
             rtol=RTOL,
         ),
     },
-    MomentumIterativeAttack: {
+    L2MomentumIterativeAttack: {
         "cl_class": MomentumIterativeMethod,
         "kwargs": dict(
             eps=EPS,
@@ -132,6 +137,27 @@ attack_kwargs = {
         "at_kwargs": dict(
         ),
         "cl_kwargs": dict(
+            ord=2,
+        ),
+        "thresholds": dict(
+            atol=ATOL,
+            rtol=RTOL,
+        ),
+    },
+    LinfMomentumIterativeAttack: {
+        "cl_class": MomentumIterativeMethod,
+        "kwargs": dict(
+            eps=EPS,
+            eps_iter=0.01,
+            clip_min=0.0,
+            clip_max=1.0,
+            decay_factor=1.,
+            nb_iter=NB_ITER,
+        ),
+        "at_kwargs": dict(
+        ),
+        "cl_kwargs": dict(
+            ord=np.inf,
         ),
         "thresholds": dict(
             atol=ATOL,
@@ -332,6 +358,9 @@ def compare_attacks(key, item, targeted=False):
     cl_kwargs = merge2dicts(item["kwargs"], item["cl_kwargs"])
     at_kwargs = merge2dicts(item["kwargs"], item["at_kwargs"])
     thresholds = item["thresholds"]
+    seed = 6666
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     # WARNING: don't use tf.InteractiveSession() here
     # It causes that fastfeature attack has to be the last test for some reason
@@ -384,7 +413,6 @@ def compare_attacks(key, item, targeted=False):
                  "the test results are not reliable,"
                  " Adjust your testing parameters to avoid this."
                  )
-
         compare_at_cl(ptb_at, ptb_cl, **thresholds)
 
 
@@ -405,10 +433,18 @@ def test_fgm_attack(targeted):
 
 
 @pytest.mark.parametrize("targeted", [False, True])
-def test_momentum_iterative_attack(targeted):
+def test_l2_momentum_iterative_attack(targeted):
     compare_attacks(
-        MomentumIterativeAttack,
-        attack_kwargs[MomentumIterativeAttack],
+        L2MomentumIterativeAttack,
+        attack_kwargs[L2MomentumIterativeAttack],
+        targeted)
+
+
+@pytest.mark.parametrize("targeted", [False, True])
+def test_linf_momentum_iterative_attack(targeted):
+    compare_attacks(
+        LinfMomentumIterativeAttack,
+        attack_kwargs[LinfMomentumIterativeAttack],
         targeted)
 
 
@@ -467,4 +503,6 @@ def test_jsma():
 
 
 if __name__ == '__main__':
-    pass
+    # pass
+    test_iterative_attack(False)
+    test_iterative_attack(True)

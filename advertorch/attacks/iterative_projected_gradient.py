@@ -243,7 +243,6 @@ class LinfBasicIterativeAttack(PGDAttack):
     :param rand_init: (optional bool) random initialization.
     :param clip_min: mininum value per input dimension.
     :param clip_max: maximum value per input dimension.
-    :param ord: (optional) the order of maximum distortion (inf or 2).
     :param targeted: if the attack is targeted.
     """
 
@@ -273,11 +272,12 @@ class MomentumIterativeAttack(Attack, LabelMixin):
     :param clip_min: mininum value per input dimension.
     :param clip_max: maximum value per input dimension.
     :param targeted: if the attack is targeted.
+    :param ord: the order of maximum distortion (inf or 2).
     """
 
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40, decay_factor=1.,
-            eps_iter=0.01, clip_min=0., clip_max=1., targeted=False):
+            eps_iter=0.01, clip_min=0., clip_max=1., targeted=False, ord=np.inf):
         """
         Create an instance of the MomentumIterativeAttack.
 
@@ -289,6 +289,7 @@ class MomentumIterativeAttack(Attack, LabelMixin):
         self.decay_factor = decay_factor
         self.eps_iter = eps_iter
         self.targeted = targeted
+        self.ord = ord
         if self.loss_fn is None:
             self.loss_fn = nn.CrossEntropyLoss(reduction="sum")
 
@@ -329,17 +330,83 @@ class MomentumIterativeAttack(Attack, LabelMixin):
             # according to the paper it should be .sum(), but in their
             #   implementations (both cleverhans and the link from the paper)
             #   it is .mean(), but actually it shouldn't matter
-
-            delta.data += self.eps_iter * torch.sign(g)
-            # delta.data += self.eps / self.nb_iter * torch.sign(g)
-
-            delta.data = clamp(
-                delta.data, min=-self.eps, max=self.eps)
-            delta.data = clamp(
-                x + delta.data, min=self.clip_min, max=self.clip_max) - x
+            if self.ord == np.inf:
+                delta.data += self.eps_iter * torch.sign(g)
+                delta.data = clamp(
+                    delta.data, min=-self.eps, max=self.eps)
+                delta.data = clamp(
+                    x + delta.data, min=self.clip_min, max=self.clip_max) - x
+            elif self.ord == 2:
+                delta.data += self.eps_iter * normalize_by_pnorm(g, p=2)
+                delta.data *= clamp(
+                    (self.eps * normalize_by_pnorm(delta.data, p=2) / delta.data),
+                    max=1.)
+                delta.data = clamp(
+                    x + delta.data, min=self.clip_min, max=self.clip_max) - x
+            else:
+                error = "Only ord = inf and ord = 2 have been implemented"
+                raise NotImplementedError(error)
 
         rval = x + delta.data
         return rval
+
+
+class L2MomentumIterativeAttack(MomentumIterativeAttack):
+    """
+    The L2 Momentum Iterative Attack
+    Paper: https://arxiv.org/pdf/1710.06081.pdf
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations
+    :param decay_factor: momentum decay factor.
+    :param eps_iter: attack step size.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    """
+    def __init__(
+            self, predict, loss_fn=None, eps=0.3, nb_iter=40, decay_factor=1.,
+            eps_iter=0.01, clip_min=0., clip_max=1., targeted=False):
+        """
+        Create an instance of the MomentumIterativeAttack.
+
+        """
+        ord = 2
+        super(L2MomentumIterativeAttack, self).__init__(
+            predict, loss_fn, eps, nb_iter, decay_factor,
+            eps_iter, clip_min, clip_max, targeted, ord)
+
+
+class LinfMomentumIterativeAttack(MomentumIterativeAttack):
+    """
+    The Linf Momentum Iterative Attack
+    Paper: https://arxiv.org/pdf/1710.06081.pdf
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations
+    :param decay_factor: momentum decay factor.
+    :param eps_iter: attack step size.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    """
+    def __init__(
+            self, predict, loss_fn=None, eps=0.3, nb_iter=40, decay_factor=1.,
+            eps_iter=0.01, clip_min=0., clip_max=1., targeted=False):
+        """
+        Create an instance of the MomentumIterativeAttack.
+
+        """
+        ord = np.inf
+        super(LinfMomentumIterativeAttack, self).__init__(
+            predict, loss_fn, eps, nb_iter, decay_factor,
+            eps_iter, clip_min, clip_max, targeted, ord)
+
+
 
 
 class FastFeatureAttack(Attack):
