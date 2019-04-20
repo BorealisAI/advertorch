@@ -86,7 +86,7 @@ import advertorch
 
 project = 'advertorch'
 copyright = '2018-present, Royal Bank of Canada.'
-author = 'Tracy Jin and Gavin Ding'
+author = ''
 
 # The short X.Y version
 version = ''
