@@ -79,21 +79,14 @@ sys.modules['torchvision'] = Mock()
 sys.modules['randomstate'] = Mock()
 sys.modules['scipy._lib'] = Mock()
 
-# import torch
-# import torch.nn
 import advertorch
-# raise
-# from advertorch import attacks
-# from advertorch import defenses
-# import advertorch.attacks
-
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'advertorch_test'
-copyright = '2019, tracy'
-author = 'tracy'
+project = 'advertorch'
+copyright = '2018-present, Royal Bank of Canada.'
+author = 'Tracy Jin and Gavin Ding'
 
 # The short X.Y version
 version = ''
@@ -174,7 +167,7 @@ def linkcode_resolve(domain, info):
     except Exception:
         filename = info['module'].replace('.', '/') + '.py'
     tag = 'master'
-    url = "https://github.com/tracyjin/advertorch/blob/%s/%s"
+    url = "https://github.com/BorealisAI/advertorch/blob/%s/%s"
     return url % (tag, filename)
 
 
@@ -254,20 +247,20 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (master_doc, 'advertorch_test.tex', 'advertorch\\_test Documentation',
-     'tracy', 'manual'),
-]
+# latex_documents = [
+#     (master_doc, 'advertorch_test.tex', 'advertorch\\_test Documentation',
+#      'tracy', 'manual'),
+# ]
 
 
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'advertorch_test', 'advertorch_test Documentation',
-     [author], 1)
-]
+# man_pages = [
+#     (master_doc, 'advertorch_test', 'advertorch_test Documentation',
+#      [author], 1)
+# ]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -275,11 +268,11 @@ man_pages = [
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
-texinfo_documents = [
-    (master_doc, 'advertorch_test', 'advertorch_test Documentation',
-     author, 'advertorch_test', 'One line description of project.',
-     'Miscellaneous'),
-]
+# texinfo_documents = [
+#     (master_doc, 'advertorch_test', 'advertorch_test Documentation',
+#      author, 'advertorch_test', 'One line description of project.',
+#      'Miscellaneous'),
+# ]
 
 
 # -- Options for Epub output -------------------------------------------------

@@ -19,6 +19,8 @@ Attacks
    LinfPGDAttack
    L2PGDAttack
    MomentumIterativeAttack
+   LinfMomentumIterativeAttack
+   L2MomentumIterativeAttack
    CarliniWagnerL2Attack
    LBFGSAttack
    SinglePixelAttack

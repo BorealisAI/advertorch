@@ -105,6 +105,7 @@ class PGDAttack(Attack, LabelMixin):
     :param ord: (optional) the order of maximum distortion (inf or 2).
     :param targeted: if the attack is targeted.
     """
+
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
@@ -173,6 +174,7 @@ class LinfPGDAttack(PGDAttack):
     :param clip_max: maximum value per input dimension.
     :param targeted: if the attack is targeted.
     """
+
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
@@ -197,6 +199,7 @@ class L2PGDAttack(PGDAttack):
     :param clip_max: maximum value per input dimension.
     :param targeted: if the attack is targeted.
     """
+
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
@@ -257,7 +260,8 @@ class LinfBasicIterativeAttack(PGDAttack):
 
 class MomentumIterativeAttack(Attack, LabelMixin):
     """
-    The L-inf projected gradient descent attack (Dong et al. 2017).
+    The Momentum Iterative Attack (Dong et al. 2017).
+
     The attack performs nb_iter steps of size eps_iter, while always staying
     within eps from the initial point. The optimization is performed with
     momentum.
@@ -277,11 +281,9 @@ class MomentumIterativeAttack(Attack, LabelMixin):
 
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40, decay_factor=1.,
-            eps_iter=0.01, clip_min=0., clip_max=1., targeted=False, ord=np.inf):
-        """
-        Create an instance of the MomentumIterativeAttack.
-
-        """
+            eps_iter=0.01, clip_min=0., clip_max=1., targeted=False,
+            ord=np.inf):
+        """Create an instance of the MomentumIterativeAttack."""
         super(MomentumIterativeAttack, self).__init__(
             predict, loss_fn, clip_min, clip_max)
         self.eps = eps
@@ -339,7 +341,8 @@ class MomentumIterativeAttack(Attack, LabelMixin):
             elif self.ord == 2:
                 delta.data += self.eps_iter * normalize_by_pnorm(g, p=2)
                 delta.data *= clamp(
-                    (self.eps * normalize_by_pnorm(delta.data, p=2) / delta.data),
+                    (self.eps * normalize_by_pnorm(delta.data, p=2)
+                        / delta.data),
                     max=1.)
                 delta.data = clamp(
                     x + delta.data, min=self.clip_min, max=self.clip_max) - x
@@ -366,13 +369,11 @@ class L2MomentumIterativeAttack(MomentumIterativeAttack):
     :param clip_max: maximum value per input dimension.
     :param targeted: if the attack is targeted.
     """
+
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40, decay_factor=1.,
             eps_iter=0.01, clip_min=0., clip_max=1., targeted=False):
-        """
-        Create an instance of the MomentumIterativeAttack.
-
-        """
+        """Create an instance of the MomentumIterativeAttack."""
         ord = 2
         super(L2MomentumIterativeAttack, self).__init__(
             predict, loss_fn, eps, nb_iter, decay_factor,
@@ -394,13 +395,11 @@ class LinfMomentumIterativeAttack(MomentumIterativeAttack):
     :param clip_max: maximum value per input dimension.
     :param targeted: if the attack is targeted.
     """
+
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40, decay_factor=1.,
             eps_iter=0.01, clip_min=0., clip_max=1., targeted=False):
-        """
-        Create an instance of the MomentumIterativeAttack.
-
-        """
+        """Create an instance of the MomentumIterativeAttack."""
         ord = np.inf
         super(LinfMomentumIterativeAttack, self).__init__(
             predict, loss_fn, eps, nb_iter, decay_factor,
@@ -426,9 +425,7 @@ class FastFeatureAttack(Attack):
 
     def __init__(self, predict, loss_fn=None, eps=0.3, eps_iter=0.05,
                  nb_iter=10, rand_init=True, clip_min=0., clip_max=1.):
-        """
-        Create an instance of the FastFeatureAttack.
-        """
+        """Create an instance of the FastFeatureAttack."""
         super(FastFeatureAttack, self).__init__(
             predict, loss_fn, clip_min, clip_max)
         self.eps = eps

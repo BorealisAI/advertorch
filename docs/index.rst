@@ -40,5 +40,5 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. _GitHub: https://github.com/tracyjin/advertorch
-.. _minimal working example: https://github.com/tracyjin/advertorch#example
+.. _GitHub: https://github.com/BorealisAI/advertorch
+.. _minimal working example: https://github.com/BorealisAI/advertorch#example

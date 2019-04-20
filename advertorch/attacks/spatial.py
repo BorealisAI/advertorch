@@ -29,7 +29,7 @@ INVALID_LABEL = -1
 
 class SpatialTransformAttack(Attack, LabelMixin):
     """
-    Sptially Transformed Attack
+    Spatially Transformed Attack (Xiao et al. 2018) https://openreview.net/forum?id=HyydRMZC-
 
     :param predict: forward pass function.
     :param num_classes: number of clasess.
@@ -41,7 +41,7 @@ class SpatialTransformAttack(Attack, LabelMixin):
     :param clip_min: mininum value per input dimension.
     :param clip_max: maximum value per input dimension.
     :param abort_early: if set to true, abort early if getting stuck in local min
-    :param targeted: if the attack is targeted  
+    :param targeted: if the attack is targeted
     """
 
     def __init__(self, predict, num_classes, confidence=0,

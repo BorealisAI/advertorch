@@ -39,15 +39,12 @@ NUM_CHECKS = 10
 
 class CarliniWagnerL2Attack(Attack, LabelMixin):
     """
-    Carlini, Nicholas, and David Wagner "Towards evaluating the
-    robustness of neural networks" 2017 IEEE Symposium on Security and
-    Privacy (SP) IEEE, 2017.
-    https://arxiv.org/abs/1608.04644
+    The Carlini and Wagner L2 Attack, https://arxiv.org/abs/1608.04644
 
     :param predict: forward pass function.
     :param num_classes: number of clasess.
     :param confidence: confidence of the adversarial examples.
-    :param targeted: TODO
+    :param targeted: if the attack is targeted.
     :param learning_rate: the learning rate for the attack algorithm
     :param binary_search_steps: number of binary search times to find the optimum
     :param max_iterations: the maximum number of iterations
@@ -63,10 +60,7 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
                  binary_search_steps=9, max_iterations=10000,
                  abort_early=True, initial_const=1e-3,
                  clip_min=0., clip_max=1., loss_fn=None):
-        """
-        Carlini Wagner L2 Attack implementation in pytorch
-        """
-
+        """Carlini Wagner L2 Attack implementation in pytorch."""
         if loss_fn is not None:
             import warnings
             warnings.warn(

@@ -15,7 +15,7 @@ from advertorch.utils import replicate_input
 class Attack(object):
     """
     Abstract base class for all attack classes.
-    
+
     :param predict: forward pass function.
     :param loss_fn: loss function that takes .
     :param clip_min: mininum value per input dimension.
@@ -26,19 +26,14 @@ class Attack(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, predict, loss_fn, clip_min, clip_max):
-        """
-        Create an Attack instance.
-
-        """
+        """Create an Attack instance."""
         self.predict = predict
         self.loss_fn = loss_fn
         self.clip_min = clip_min
         self.clip_max = clip_max
 
     def perturb(self, x, **kwargs):
-        """
-        Generate the adversarial examples. This method should be overriden
-        in any child class that implements an actual attack.
+        """Virtual method for generating the adversarial examples.
 
         :param x: the model's input tensor.
         :param **kwargs: optional parameters used by child classes.

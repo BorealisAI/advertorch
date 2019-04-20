@@ -9,7 +9,6 @@ Defenses
 .. autosummary::
    :nosignatures:
 
-   Processor
    ConvSmoothing2D
    AverageSmoothing2D
    GaussianSmoothing2D
