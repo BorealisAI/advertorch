@@ -61,6 +61,10 @@ adv_targeted = adversary.perturb(cln_data, target)
 
 For runnable examples see [`advertorch_examples/tutorial_attack_defense_bpda_mnist.ipynb`](https://github.com/BorealisAI/advertorch/blob/master/advertorch_examples/tutorial_attack_defense_bpda_mnist.ipynb) for how to attack and defend; see [`advertorch_examples/tutorial_train_mnist.py`](https://github.com/BorealisAI/advertorch/blob/master/advertorch_examples/tutorial_train_mnist.py) for how to adversarially train a robust model on MNIST.
 
+## Documentation
+
+The documentation webpage is on readthedocs  https://advertorch.readthedocs.io.
+
 
 ## Coming Soon
 
@@ -69,7 +73,6 @@ AdverTorch is still under active development. We will add the following features
 * a blog post
 * more examples
 * more complete documentation in the code
-* documentation at https://advertorch.readthedocs.io/en/latest/
 * support for other machine learning frameworks, e.g. TensorFlow
 * more attacks, defenses and other related functionalities
 * support for other Python versions and future PyTorch versions
