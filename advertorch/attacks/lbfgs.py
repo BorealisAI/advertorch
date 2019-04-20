@@ -27,6 +27,21 @@ UPPER_CHECK = 1e9
 
 
 class LBFGSAttack(Attack, LabelMixin):
+    """
+    The attack that uses L-BFGS to minimize the distance of the original
+    and perturbed images
+
+    :param predict: forward pass function.
+    :param num_classes: number of clasess.
+    :param batch_size: number of samples in the batch
+    :param binary_search_steps: number of binary search times to find the optimum
+    :param max_iterations: the maximum number of iterations
+    :param initial_const: initial value of the constant c
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param loss_fn: loss function
+    :param targeted: if the attack is targeted.
+    """
 
     def __init__(self, predict, num_classes, batch_size=1,
                  binary_search_steps=9, max_iterations=100,

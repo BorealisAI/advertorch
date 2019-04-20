@@ -23,19 +23,19 @@ class GradientSignAttack(Attack, LabelMixin):
     """
     One step fast gradient sign method (Goodfellow et al, 2014).
     Paper: https://arxiv.org/abs/1412.6572
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: attack step size.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: indicate if this is a targeted attack.
     """
 
     def __init__(self, predict, loss_fn=None, eps=0.3, clip_min=0.,
                  clip_max=1., targeted=False):
         """
         Create an instance of the GradientSignAttack.
-
-        :param predict: forward pass function.
-        :param loss_fn: loss function.
-        :param eps: attack step size.
-        :param clip_min: mininum value per input dimension.
-        :param clip_max: maximum value per input dimension.
-        :param targeted: indicate if this is a targeted attack.
         """
         super(GradientSignAttack, self).__init__(
             predict, loss_fn, clip_min, clip_max)
@@ -82,19 +82,19 @@ class GradientAttack(Attack, LabelMixin):
     """
     Perturbs the input with gradient (not gradient sign) of the loss wrt the
     input.
+    
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: attack step size.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: indicate if this is a targeted attack.
     """
 
     def __init__(self, predict, loss_fn=None, eps=0.3,
                  clip_min=0., clip_max=1., targeted=False):
         """
         Create an instance of the GradientAttack.
-
-        :param predict: forward pass function.
-        :param loss_fn: loss function.
-        :param eps: attack step size.
-        :param clip_min: mininum value per input dimension.
-        :param clip_max: maximum value per input dimension.
-        :param targeted: indicate if this is a targeted attack.
         """
         super(GradientAttack, self).__init__(
             predict, loss_fn, clip_min, clip_max)
