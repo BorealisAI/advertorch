@@ -70,3 +70,47 @@ def _imshow(img):
         img = np.repeat(img, 3, axis=2)
     plt.imshow(img, vmin=0, vmax=1)
     plt.axis("off")
+
+
+class ImageNetClassNameLookup(object):
+
+    def _load_list(self):
+        import json
+        with open(self.json_path) as f:
+            class_idx = json.load(f)
+        self.label2classname = [
+            class_idx[str(k)][1] for k in range(len(class_idx))]
+
+    def __init__(self):
+        self.json_url = ("https://s3.amazonaws.com/deep-learning-models/"
+                         "image-models/imagenet_class_index.json")
+        self.json_path = os.path.join(DATA_PATH, "imagenet_class_index.json")
+        if os.path.exists(self.json_path):
+            self._load_list()
+        else:
+            import urllib
+            urllib.request.urlretrieve(self.json_url, self.json_path)
+            self._load_list()
+
+
+    def __call__(self, label):
+        return self.label2classname[label]
+
+
+imagenet_label2classname = ImageNetClassNameLookup()
+
+
+def get_panda_image():
+    img_path = os.path.join(DATA_PATH, "panda.jpg")
+    img_url = "https://farm1.static.flickr.com/230/524562325_fb0a11d1e1.jpg"
+
+    def _load_panda_image():
+        from skimage.io import imread
+        return imread(img_path) / 255.
+
+    if os.path.exists(img_path):
+        return _load_panda_image()
+    else:
+        import urllib
+        urllib.request.urlretrieve(img_url, img_path)
+        return _load_panda_image()
