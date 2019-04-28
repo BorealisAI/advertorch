@@ -97,9 +97,6 @@ class ImageNetClassNameLookup(object):
         return self.label2classname[label]
 
 
-imagenet_label2classname = ImageNetClassNameLookup()
-
-
 def get_panda_image():
     img_path = os.path.join(DATA_PATH, "panda.jpg")
     img_url = "https://farm1.static.flickr.com/230/524562325_fb0a11d1e1.jpg"
