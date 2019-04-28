@@ -24,7 +24,7 @@ from .base import LabelMixin
 class JacobianSaliencyMapAttack(Attack, LabelMixin):
     """
     Jacobian Saliency Map Attack
-    This includes Algorithm 1 and 3 in v1
+    This includes Algorithm 1 and 3 in v1, https://arxiv.org/abs/1511.07528v1
 
     :param predict: forward pass function.
     :param num_classes: number of clasess.
@@ -38,9 +38,6 @@ class JacobianSaliencyMapAttack(Attack, LabelMixin):
     def __init__(self, predict, num_classes,
                  clip_min=0.0, clip_max=1.0, loss_fn=None,
                  theta=1.0, gamma=1.0, comply_cleverhans=False):
-        """
-        https://arxiv.org/abs/1511.07528
-        """
         super(JacobianSaliencyMapAttack, self).__init__(
             predict, loss_fn, clip_min, clip_max)
         self.num_classes = num_classes
