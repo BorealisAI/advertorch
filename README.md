@@ -70,9 +70,7 @@ The documentation webpage is on readthedocs  https://advertorch.readthedocs.io.
 
 AdverTorch is still under active development. We will add the following features/items down the road:
 
-* a blog post
 * more examples
-* more complete documentation in the code
 * support for other machine learning frameworks, e.g. TensorFlow
 * more attacks, defenses and other related functionalities
 * support for other Python versions and future PyTorch versions
