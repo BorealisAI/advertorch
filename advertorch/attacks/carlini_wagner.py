@@ -111,9 +111,9 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
         if is_logits:
             output = output.detach().clone()
             if self.targeted:
-                output[torch.arange(len(label)), label] -= self.confidence
+                output[torch.arange(len(label)).long(), label] -= self.confidence
             else:
-                output[torch.arange(len(label)), label] += self.confidence
+                output[torch.arange(len(label)).long(), label] += self.confidence
             pred = torch.argmax(output, dim=1)
         else:
             pred = output
