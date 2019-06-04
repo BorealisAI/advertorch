@@ -28,6 +28,7 @@ from cleverhans.attacks import FastFeatureAdversaries
 from cleverhans.attacks import BasicIterativeMethod
 from cleverhans.attacks import LBFGS
 from cleverhans.attacks import SaliencyMapMethod
+from cleverhans.model import Model as ClModel
 
 from advertorch.attacks import CarliniWagnerL2Attack
 from advertorch.attacks import GradientAttack
@@ -42,8 +43,7 @@ from advertorch.attacks import LBFGSAttack
 from advertorch.attacks import JacobianSaliencyMapAttack
 from advertorch.test_utils import SimpleModel
 from advertorch.test_utils import merge2dicts
-from advertorch.test_utils import setup_simple_model
-from advertorch.test_utils import SimpleModelTf
+
 
 BATCH_SIZE = 9
 DIM_INPUT = 15
@@ -59,13 +59,73 @@ seed = 66666
 torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
-tf.random.set_random_seed(seed)
+tf.set_random_seed(seed)
 inputs = np.random.uniform(0, 1, size=(BATCH_SIZE, DIM_INPUT))
 targets = np.random.randint(0, NUM_CLASS, size=BATCH_SIZE)
 
 
 targets_onehot = np.zeros((BATCH_SIZE, NUM_CLASS), dtype='int')
 targets_onehot[np.arange(BATCH_SIZE), targets] = 1
+
+
+class SimpleModelTf(ClModel):
+
+    def __init__(self, dim_input, num_classes, session=None):
+        import keras
+        self.sess = session
+        model = keras.models.Sequential()
+        model.add(keras.layers.Dense(10, input_shape=(dim_input, )))
+        model.add(keras.layers.Activation('relu'))
+        model.add(keras.layers.Dense(num_classes))
+        self.model = model
+        self.flag_weight_set = False
+
+    def set_weights(self, weights):
+        self.model.set_weights(weights)
+        self.flag_weight_set = True
+
+    def load_state_dict(self, w):
+        self.set_weights([
+            w['fc1.weight'].cpu().numpy().transpose(),
+            w['fc1.bias'].cpu().numpy(),
+            w['fc2.weight'].cpu().numpy().transpose(),
+            w['fc2.bias'].cpu().numpy(),
+        ])
+
+    def get_logits(self, data):
+        assert self.flag_weight_set, "Weight Not Set!!!"
+        return self.model(data)
+
+    def get_probs(self, data):
+        assert self.flag_weight_set, "Weight Not Set!!!"
+        return tf.nn.softmax(logits=self.model(data))
+
+
+def load_weights_pt(model_pt, layers):
+    w = model_pt.state_dict()
+    layers[0].W = tf.Variable(tf.convert_to_tensor(
+        w['fc1.weight'].cpu().numpy().transpose(), tf.float32))
+    layers[0].b = tf.Variable(tf.convert_to_tensor(
+        w['fc1.bias'].cpu().numpy(), tf.float32))
+    layers[2].W = tf.Variable(tf.convert_to_tensor(
+        w['fc2.weight'].cpu().numpy().transpose(), tf.float32))
+    layers[2].b = tf.Variable(tf.convert_to_tensor(
+        w['fc2.bias'].cpu().numpy(), tf.float32))
+
+
+def setup_simple_model_tf(model_pt, input_shape):
+    from cleverhans_tutorials.tutorial_models import MLP, Linear, ReLU
+    layers = [Linear(10),
+              ReLU(),
+              Linear(10)]
+    layers[0].name = 'fc1'
+    layers[1].name = 'relu'
+    layers[2].name = 'fc2'
+    model = MLP(layers, input_shape)
+    load_weights_pt(model_pt, layers)
+    return model
+
+
 
 # kwargs for attacks to be tested
 attack_kwargs = {
@@ -296,7 +356,6 @@ attack_kwargs = {
 def overwrite_fastfeature(attack, x, g, eta, **kwargs):
     # overwrite cleverhans generate function for fastfeatureattack to
     # allow eta as an input
-    import tensorflow as tf
     from cleverhans.utils_tf import clip_eta
 
     # Parse and save attack-specific parameters
@@ -371,7 +430,8 @@ def compare_attacks(key, item, targeted=False):
         adversary = AdvertorchAttack(model_pt, **at_kwargs)
 
         if AdvertorchAttack is FastFeatureAttack:
-            model_tf_fastfeature = setup_simple_model(model_pt, inputs.shape)
+            model_tf_fastfeature = setup_simple_model_tf(
+                model_pt, inputs.shape)
             delta = np.random.uniform(
                 -item["kwargs"]['eps'], item["kwargs"]['eps'],
                 size=inputs.shape).astype('float32')

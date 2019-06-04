@@ -8,8 +8,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import tensorflow as tf
-from cleverhans.model import Model as ClModel
 
 from advertorch.attacks import LocalSearchAttack
 from advertorch.attacks import SinglePixelAttack
@@ -117,66 +115,6 @@ class MLP(nn.Module):
         out = self.relu2(out)
         out = self.linear3(out)
         return out
-
-
-class SimpleModelTf(ClModel):
-
-    def __init__(self, dim_input, num_classes, session=None):
-        import keras
-        self.sess = session
-        model = keras.models.Sequential()
-        model.add(keras.layers.Dense(10, input_shape=(dim_input, )))
-        model.add(keras.layers.Activation('relu'))
-        model.add(keras.layers.Dense(num_classes))
-        self.model = model
-        self.flag_weight_set = False
-
-    def set_weights(self, weights):
-        self.model.set_weights(weights)
-        self.flag_weight_set = True
-
-    def load_state_dict(self, w):
-        self.set_weights([
-            w['fc1.weight'].cpu().numpy().transpose(),
-            w['fc1.bias'].cpu().numpy(),
-            w['fc2.weight'].cpu().numpy().transpose(),
-            w['fc2.bias'].cpu().numpy(),
-        ])
-
-    def get_logits(self, data):
-        assert self.flag_weight_set, "Weight Not Set!!!"
-        return self.model(data)
-
-    def get_probs(self, data):
-        assert self.flag_weight_set, "Weight Not Set!!!"
-        return tf.nn.softmax(logits=self.model(data))
-
-
-def load_weights_pt(model_pt, layers):
-    import tensorflow as tf
-    w = model_pt.state_dict()
-    layers[0].W = tf.Variable(tf.convert_to_tensor(
-        w['fc1.weight'].cpu().numpy().transpose(), tf.float32))
-    layers[0].b = tf.Variable(tf.convert_to_tensor(
-        w['fc1.bias'].cpu().numpy(), tf.float32))
-    layers[2].W = tf.Variable(tf.convert_to_tensor(
-        w['fc2.weight'].cpu().numpy().transpose(), tf.float32))
-    layers[2].b = tf.Variable(tf.convert_to_tensor(
-        w['fc2.bias'].cpu().numpy(), tf.float32))
-
-
-def setup_simple_model(model_pt, input_shape):
-    from cleverhans_tutorials.tutorial_models import MLP, Linear, ReLU
-    layers = [Linear(10),
-              ReLU(),
-              Linear(10)]
-    layers[0].name = 'fc1'
-    layers[1].name = 'relu'
-    layers[2].name = 'fc2'
-    model = MLP(layers, input_shape)
-    load_weights_pt(model_pt, layers)
-    return model
-
 
 
 # ###########################################################
