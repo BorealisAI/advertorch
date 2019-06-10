@@ -17,5 +17,6 @@ with open(os.path.join(os.path.dirname(__file__), 'advertorch/VERSION')) as f:
 setup(name='advertorch',
       version=version,
       url='https://github.com/BorealisAI/advertorch',
+      package_data={'advertorch_examples': ['*.ipynb', 'trained_models/*.pt']},
       include_package_data=True,
       packages=find_packages())
