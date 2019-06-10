@@ -4,3 +4,5 @@ include advertorch/VERSION
 include pytest.ini
 include LICENSE
 include LICENSE.GPL
+include advertorch_examples/trained_models/*.pt
+include advertorch_examples/*.ipynb

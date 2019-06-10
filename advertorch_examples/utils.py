@@ -12,17 +12,23 @@ from __future__ import unicode_literals
 
 import os
 import sys
+import pathlib
 
 import numpy as np
 import torch
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
+ROOT_PATH = os.path.join(os.path.expanduser("~/.advertorch"), "data")
+DATA_PATH = os.path.join(ROOT_PATH, "data")
+MNIST_PATH = os.path.join(DATA_PATH, "mnist")
 
 path_of_this_module = os.path.dirname(sys.modules[__name__].__file__)
-DATA_PATH = os.path.join(path_of_this_module, "data")
-MNIST_PATH = os.path.join(DATA_PATH, "mnist")
 TRAINED_MODEL_PATH = os.path.join(path_of_this_module, "trained_models")
+
+
+def mkdir(directory):
+    pathlib.Path(directory).mkdir(parents=True, exist_ok=True)
 
 
 def get_mnist_train_loader(batch_size, shuffle=True):
@@ -111,3 +117,8 @@ def get_panda_image():
         import urllib
         urllib.request.urlretrieve(img_url, img_path)
         return _load_panda_image()
+
+
+mkdir(ROOT_PATH)
+mkdir(DATA_PATH)
+mkdir(MNIST_PATH)
