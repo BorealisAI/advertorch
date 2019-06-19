@@ -52,6 +52,11 @@ def calc_l2distsq(x, y):
     return d.view(d.shape[0], -1).sum(dim=1)
 
 
+def calc_l1dist(x, y):
+  d = torch.abs(x - y)
+  return d.view(d.shape[0], -1).sum(dim=1)
+
+
 def tanh_rescale(x, x_min=-1., x_max=1.):
     return (torch.tanh(x)) * 0.5 * (x_max - x_min) + (x_max + x_min) * 0.5
 

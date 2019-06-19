@@ -26,6 +26,7 @@ from .iterative_projected_gradient import L2MomentumIterativeAttack
 from .iterative_projected_gradient import LinfMomentumIterativeAttack
 
 from .carlini_wagner import CarliniWagnerL2Attack
+from .ead import ElasticNetL1Attack 
 
 from .lbfgs import LBFGSAttack
 
