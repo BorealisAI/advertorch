@@ -65,7 +65,7 @@ attack_kwargs = {
     GradientAttack: {},
     LinfBasicIterativeAttack: {"nb_iter": 5},
     L2BasicIterativeAttack: {"nb_iter": 5},
-    LinfPGDAttack: {"rand_init": True, "nb_iter": 5},
+    LinfPGDAttack: {"rand_init": False, "nb_iter": 5},
     MomentumIterativeAttack: {"nb_iter": 5},
     CarliniWagnerL2Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
     FastFeatureAttack: {"rand_init": False, "nb_iter": 5},
