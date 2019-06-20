@@ -156,6 +156,46 @@ def _get_norm_batch(x, p):
     return x.abs().pow(p).view(batch_size, -1).sum(dim=1).pow(1. / p)
 
 
+def soft_thresh(lamda, x):
+    abs_input = torch.abs(x)
+    sign = x.sign()
+
+    mag = abs_input - lamda
+    mag = (torch.abs(mag) + mag) / 2
+
+    return mag * sign
+
+
+def batch_l1_proj_flat(x, eps=1):
+    d = torch.abs(x)
+    d = d.view(d.shape[0], -1).sum(dim=1)
+    indexes_b = torch.nonzero(d > 1).view(-1)
+    x_b = x[indexes_b]
+    batch_size_b = x_b.size(0)
+    if batch_size_b == 0:
+        return x
+    view = x_b.view(batch_size_b, -1)
+    view_size = view.size(1)
+    s = view.abs().sort(1, descending=True)[0]
+    if x.is_cuda:
+        vv = torch.arange(view_size).float().cuda()
+    else:
+        vv = torch.arange(view_size).float()
+    st = (s.cumsum(1)-eps)/(+1)
+    idx = ((s-st) > 0).max(1)[1]
+    proj_x_b = soft_thresh(st.gather(1, idx.unsqueeze(1)), x_b)
+    proj_x = x
+    proj_x[indexes_b] = proj_x_b
+    return proj_x
+
+
+def batch_l1_proj(x, eps):
+    batch_size = x.size(0)
+    view = x.view(batch_size, -1)
+    proj_flat = batch_l1_proj_flat(view, eps)
+    return proj_flat.view_as(x)
+
+
 def clamp_by_pnorm(x, p, r):
     assert isinstance(p, float) or isinstance(p, int)
     norm = _get_norm_batch(x, p)

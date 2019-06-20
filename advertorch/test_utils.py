@@ -18,6 +18,7 @@ from advertorch.attacks import CarliniWagnerL2Attack
 from advertorch.attacks import FastFeatureAttack
 from advertorch.attacks import MomentumIterativeAttack
 from advertorch.attacks import LinfPGDAttack
+from advertorch.attacks import SparseL1Attack
 from advertorch.attacks import L2BasicIterativeAttack
 from advertorch.attacks import GradientAttack
 from advertorch.attacks import LinfBasicIterativeAttack
@@ -121,7 +122,6 @@ class MLP(nn.Module):
 # model and data generation functions for testing
 
 
-
 def generate_random_toy_data(clip_min=0., clip_max=1.):
     data = torch.Tensor(BATCH_SIZE, DIM_INPUT).uniform_(clip_min, clip_max)
     label = torch.LongTensor(BATCH_SIZE).random_(NUM_CLASS)
@@ -206,10 +206,8 @@ general_input_defenses = [
 ]
 
 
-
 # ###########################################################
 # construct groups and configs needed for testing attacks
-
 
 
 # as opposed to image-only
@@ -225,6 +223,8 @@ general_input_attacks = [
     LBFGSAttack,
     JacobianSaliencyMapAttack,
     SinglePixelAttack,
+    SparseL1Attack,
+
 ]
 
 image_only_attacks = [
@@ -243,6 +243,8 @@ label_attacks = [
     LBFGSAttack,
     JacobianSaliencyMapAttack,
     SpatialTransformAttack,
+    SparseL1Attack,
+
 ]
 
 feature_attacks = [
@@ -258,6 +260,7 @@ batch_consistent_attacks = [
     MomentumIterativeAttack,
     FastFeatureAttack,
     JacobianSaliencyMapAttack,
+    SparseL1Attack,
     # CarliniWagnerL2Attack,  # XXX: not exactly sure: test says no
     # LBFGSAttack,  # XXX: not exactly sure: test says no
     # SpatialTransformAttack,  # XXX: not exactly sure: test says no

@@ -21,6 +21,7 @@ from advertorch.utils import is_float_or_torch_tensor
 from advertorch.utils import batch_multiply
 from advertorch.utils import batch_clamp
 from advertorch.utils import replicate_input
+from advertorch.utils import batch_l1_proj
 
 from .base import Attack
 from .base import LabelMixin
@@ -29,7 +30,7 @@ from .utils import rand_init_delta
 
 def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
                       delta_init=None, minimize=False, ord=np.inf,
-                      clip_min=0.0, clip_max=1.0):
+                      clip_min=0.0, sparsity=0.95, clip_max=1.0):
     """
     Iteratively maximize the loss over the input. It is a shared method for
     iterative attacks including IterativeGradientSign, LinfPGD, etc.
@@ -77,10 +78,28 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
                                ) - xvar.data
             if eps is not None:
                 delta.data = clamp_by_pnorm(delta.data, ord, eps)
-        else:
-            error = "Only ord = inf and ord = 2 have been implemented"
-            raise NotImplementedError(error)
 
+        elif ord == 1:
+            grad = delta.grad.data
+            abs_grad = torch.abs(grad)
+
+            batch_size = grad.size(0)
+            view = abs_grad.view(batch_size, -1)
+            view_size = view.size(1)
+            vals, idx = view.topk(int((1-sparsity)*view_size))
+
+            out = torch.zeros_like(view).scatter_(1, idx, vals)
+
+            out = out.view_as(grad)
+            grad = grad.sign()*(out > 0).float()
+            grad = normalize_by_pnorm(grad, p=1)
+            delta.data = delta.data + batch_multiply(eps_iter, grad)
+            delta.data = batch_l1_proj(delta.data, eps)
+            delta.data = clamp(xvar.data + delta.data, clip_min, clip_max
+                               ) - xvar.data
+        else:
+            error = "Only ord = inf, ord = 1 and ord = 2 have been implemented"
+            raise NotImplementedError(error)
         delta.grad.data.zero_()
 
     x_adv = clamp(xvar + delta, clip_min, clip_max)
@@ -109,7 +128,7 @@ class PGDAttack(Attack, LabelMixin):
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
-            ord=np.inf, targeted=False):
+            ord=np.inf, sparsity=0.95, targeted=False):
         """
         Create an instance of the PGDAttack.
 
@@ -124,6 +143,7 @@ class PGDAttack(Attack, LabelMixin):
         self.targeted = targeted
         if self.loss_fn is None:
             self.loss_fn = nn.CrossEntropyLoss(reduction="sum")
+        self.sparsity = sparsity
 
         assert is_float_or_torch_tensor(self.eps_iter)
         assert is_float_or_torch_tensor(self.eps)
@@ -208,6 +228,31 @@ class L2PGDAttack(PGDAttack):
         super(L2PGDAttack, self).__init__(
             predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
             clip_min, clip_max, ord, targeted)
+
+
+class SparseL1Attack(PGDAttack):
+    """
+    PGD Attack with order=Linf
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations.
+    :param eps_iter: attack step size.
+    :param rand_init: (optional bool) random initialization.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    """
+
+    def __init__(
+            self, predict, loss_fn=None, eps=0.3, nb_iter=40,
+            eps_iter=0.01, rand_init=False, clip_min=0., clip_max=1., sparsity=0.95,
+            targeted=False):
+        ord = 1
+        super(SparseL1Attack, self).__init__(
+            predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
+            clip_min, clip_max, ord, sparsity, targeted)
 
 
 class L2BasicIterativeAttack(PGDAttack):
@@ -404,8 +449,6 @@ class LinfMomentumIterativeAttack(MomentumIterativeAttack):
         super(LinfMomentumIterativeAttack, self).__init__(
             predict, loss_fn, eps, nb_iter, decay_factor,
             eps_iter, clip_min, clip_max, targeted, ord)
-
-
 
 
 class FastFeatureAttack(Attack):
