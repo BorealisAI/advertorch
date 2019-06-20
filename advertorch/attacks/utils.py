@@ -19,7 +19,7 @@ from torch.distributions import uniform
 from advertorch.utils import clamp
 from advertorch.utils import clamp_by_pnorm
 from advertorch.utils import batch_multiply
-from advertorch.utils import batch_l1_proj
+from advertorch.utils import normalize_by_pnorm
 
 
 def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
@@ -46,9 +46,11 @@ def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
         delta.data = delta.data - x
         delta.data = clamp_by_pnorm(delta.data, ord, eps)
     elif ord == 1:
-        delta.data.uniform_(clip_min, clip_max)
-        delta.data = delta.data - x
-        delta.data = batch_l1_proj(delta.data, eps)
+        ini = laplace.Laplace(0, 1)
+        delta.data = ini.sample(delta.data.shape)
+        delta.data = normalize_by_pnorm(delta.data, p=1)
+        ray = uniform.Uniform(0, eps).sample()
+        delta.data *= ray
     else:
         error = "Only ord = inf, ord = 1 and ord = 2 have been implemented"
         raise NotImplementedError(error)
