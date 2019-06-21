@@ -163,9 +163,11 @@ def _run_batch_consistent(data, label, model, att_cls, idx):
     model.to(cpu)
     data, label_or_guide = data.to(cpu), label_or_guide.to(cpu)
     adversary = att_cls(model, **attack_kwargs[att_cls])
-    assert torch_allclose(
-        adversary.perturb(data, label_or_guide)[idx:idx + 1],
-        adversary.perturb(data[idx:idx + 1], label_or_guide[idx:idx + 1]))
+    torch.manual_seed(0)
+    a = adversary.perturb(data, label_or_guide)[idx:idx + 1]
+    torch.manual_seed(0)
+    b = adversary.perturb(data[idx:idx + 1], label_or_guide[idx:idx + 1])
+    assert torch_allclose(a, b)
 
 
 @pytest.mark.parametrize(

@@ -167,9 +167,11 @@ def soft_thresh(lamda, x):
 
 
 def batch_l1_proj_flat(x, eps=1):
+    # this function does not return the good result when x is a cuda tensor
+    # don't know why...
     d = torch.abs(x)
     d = d.view(d.shape[0], -1).sum(dim=1)
-    indexes_b = torch.nonzero(d > 1).view(-1)
+    indexes_b = torch.nonzero(d > eps).view(-1)
     x_b = x[indexes_b]
     batch_size_b = x_b.size(0)
     if batch_size_b == 0:
@@ -181,7 +183,7 @@ def batch_l1_proj_flat(x, eps=1):
         vv = torch.arange(view_size).float().cuda()
     else:
         vv = torch.arange(view_size).float()
-    st = (s.cumsum(1)-eps)/(+1)
+    st = (s.cumsum(1)-eps)/(vv+1)
     idx = ((s-st) > 0).max(1)[1]
     proj_x_b = soft_thresh(st.gather(1, idx.unsqueeze(1)), x_b)
     proj_x = x
