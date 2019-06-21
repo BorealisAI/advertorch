@@ -184,7 +184,8 @@ def batch_l1_proj_flat(x, eps=1):
     else:
         vv = torch.arange(view_size).float()
     st = (s.cumsum(1)-eps)/(vv+1)
-    idx = ((s-st) > 0).max(1)[1]
+    u = (s-st) > 0
+    idx = (1-u).cumsum(dim=1).eq(0).sum(1)-1
     proj_x_b = soft_thresh(st.gather(1, idx.unsqueeze(1)), x_b)
     proj_x = x
     proj_x[indexes_b] = proj_x_b
