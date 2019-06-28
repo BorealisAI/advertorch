@@ -27,6 +27,8 @@ from .iterative_projected_gradient import LinfMomentumIterativeAttack
 
 from .carlini_wagner import CarliniWagnerL2Attack
 
+from .decoupled_direction_norm import DDNL2Attack
+
 from .lbfgs import LBFGSAttack
 
 from .localsearch import SinglePixelAttack
