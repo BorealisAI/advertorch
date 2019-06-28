@@ -9,11 +9,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import math
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 def torch_allclose(x, y, rtol=1.e-5, atol=1.e-8):
     """
@@ -53,8 +53,8 @@ def calc_l2distsq(x, y):
 
 
 def calc_l1dist(x, y):
-  d = torch.abs(x - y)
-  return d.view(d.shape[0], -1).sum(dim=1)
+    d = torch.abs(x - y)
+    return d.view(d.shape[0], -1).sum(dim=1)
 
 
 def tanh_rescale(x, x_min=-1., x_max=1.):
@@ -213,6 +213,24 @@ def jacobian(model, x, output_class):
     torch.sum(scores[:, output_class]).backward()
 
     return xvar.grad.detach().clone()
+
+
+def polynomial_decay(optimizer, learning_rate, global_step, decay_steps,
+          end_learning_rate=0.0001, power=1.0, cycle=False):
+
+    if not cycle:
+        global_step = min(global_step, decay_steps)
+        decayed_learning_rate = \
+          (learning_rate - end_learning_rate) * \
+             (1 - global_step / decay_steps)**power + end_learning_rate
+    else:
+        decay_steps = decay_steps * math.ceil(global_step / decay_steps)
+        decayed_learning_rate = \
+            (learning_rate - end_learning_rate) * \
+               (1 - global_step / decay_steps)**power + end_learning_rate
+
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = decayed_learning_rate
 
 
 MNIST_MEAN = (0.1307,)
