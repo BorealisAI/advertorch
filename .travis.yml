@@ -12,4 +12,5 @@ before_install:
 install:
     - pip install -e .
 script:
+    - flake8 --exclude=build/*
     - pytest
