@@ -30,7 +30,7 @@ from .utils import rand_init_delta
 
 def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
                       delta_init=None, minimize=False, ord=np.inf,
-                      clip_min=0.0, clip_max=1.0, l1_sparsity=0.95):
+                      clip_min=0.0, clip_max=1.0, l1_sparsity=0.95, l1_pgd=False):
     """
     Iteratively maximize the loss over the input. It is a shared method for
     iterative attacks including IterativeGradientSign, LinfPGD, etc.
@@ -86,7 +86,10 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
             batch_size = grad.size(0)
             view = abs_grad.view(batch_size, -1)
             view_size = view.size(1)
-            vals, idx = view.topk(int((1-l1_sparsity)*view_size))
+            if l1_pgd:
+                vals, idx = view.topk(1)
+            else:
+                vals, idx = view.topk(int(np.round((1-l1_sparsity)*view_size)))
 
             out = torch.zeros_like(view).scatter_(1, idx, vals)
             out = out.view_as(grad)
@@ -129,7 +132,7 @@ class PGDAttack(Attack, LabelMixin):
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
-            ord=np.inf, l1_sparsity=0.95, targeted=False):
+            ord=np.inf, l1_sparsity=0.95, targeted=False, l1_pgd=False):
         """
         Create an instance of the PGDAttack.
 
@@ -145,7 +148,7 @@ class PGDAttack(Attack, LabelMixin):
         if self.loss_fn is None:
             self.loss_fn = nn.CrossEntropyLoss(reduction="sum")
         self.l1_sparsity = l1_sparsity
-
+        self.l1_pgd = l1_pgd
         assert is_float_or_torch_tensor(self.eps_iter)
         assert is_float_or_torch_tensor(self.eps)
 
@@ -176,7 +179,9 @@ class PGDAttack(Attack, LabelMixin):
             eps=self.eps, eps_iter=self.eps_iter,
             loss_fn=self.loss_fn, minimize=self.targeted,
             ord=self.ord, clip_min=self.clip_min,
-            clip_max=self.clip_max, delta_init=delta)
+            clip_max=self.clip_max, delta_init=delta,
+            l1_sparsity=self.l1_sparsity,
+            l1_pgd=self.l1_pgd)
 
         return rval.data
 
@@ -231,9 +236,9 @@ class L2PGDAttack(PGDAttack):
             clip_min, clip_max, ord, targeted)
 
 
-class SparseL1DescentAttack(PGDAttack):
+class L1PGDAttack(PGDAttack):
     """
-    PGD Attack with order=Linf
+    PGD Attack with order=L1
 
     :param predict: forward pass function.
     :param loss_fn: loss function.
@@ -248,17 +253,18 @@ class SparseL1DescentAttack(PGDAttack):
 
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
-            eps_iter=0.01, rand_init=False, clip_min=0., clip_max=1., l1_sparsity=0.95,
+            eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
             targeted=False):
         ord = 1
-        super(SparseL1DescentAttack, self).__init__(
+        l1_pgd = True
+        super(L2PGDAttack, self).__init__(
             predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
-            clip_min, clip_max, ord, l1_sparsity, targeted)
+            clip_min, clip_max, ord, targeted, l1_pgd)
 
 
 class SparseL1DescentAttack(PGDAttack):
     """
-    PGD Attack with order=Linf
+    SparseL1Descent Attack 
 
     :param predict: forward pass function.
     :param loss_fn: loss function.
@@ -269,6 +275,7 @@ class SparseL1DescentAttack(PGDAttack):
     :param clip_min: mininum value per input dimension.
     :param clip_max: maximum value per input dimension.
     :param targeted: if the attack is targeted.
+    :param l1_sparsity: proportion of zeros in gradient updates
     """
 
     def __init__(
