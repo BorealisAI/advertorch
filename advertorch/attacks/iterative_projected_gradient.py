@@ -97,8 +97,7 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
             delta.data = batch_l1_proj(delta.data.cpu(), eps)
             if xvar.is_cuda:
                 delta.data = delta.data.cuda()
-            delta.data = clamp(xvar.data + delta.data, clip_min, clip_max)
-            delta = delta - xvar.data
+            delta.data = clamp(xvar.data + delta.data, clip_min, clip_max) - xvar.data
         else:
             error = "Only ord = inf, ord = 1 and ord = 2 have been implemented"
             raise NotImplementedError(error)
@@ -230,6 +229,56 @@ class L2PGDAttack(PGDAttack):
         super(L2PGDAttack, self).__init__(
             predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
             clip_min, clip_max, ord, targeted)
+
+
+class SparseL1DescentAttack(PGDAttack):
+    """
+    PGD Attack with order=Linf
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations.
+    :param eps_iter: attack step size.
+    :param rand_init: (optional bool) random initialization.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    """
+
+    def __init__(
+            self, predict, loss_fn=None, eps=0.3, nb_iter=40,
+            eps_iter=0.01, rand_init=False, clip_min=0., clip_max=1., l1_sparsity=0.95,
+            targeted=False):
+        ord = 1
+        super(SparseL1DescentAttack, self).__init__(
+            predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
+            clip_min, clip_max, ord, l1_sparsity, targeted)
+
+
+class SparseL1DescentAttack(PGDAttack):
+    """
+    PGD Attack with order=Linf
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param nb_iter: number of iterations.
+    :param eps_iter: attack step size.
+    :param rand_init: (optional bool) random initialization.
+    :param clip_min: mininum value per input dimension.
+    :param clip_max: maximum value per input dimension.
+    :param targeted: if the attack is targeted.
+    """
+
+    def __init__(
+            self, predict, loss_fn=None, eps=0.3, nb_iter=40,
+            eps_iter=0.01, rand_init=False, clip_min=0., clip_max=1., l1_sparsity=0.95,
+            targeted=False):
+        ord = 1
+        super(SparseL1DescentAttack, self).__init__(
+            predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
+            clip_min, clip_max, ord, l1_sparsity, targeted)
 
 
 class SparseL1DescentAttack(PGDAttack):

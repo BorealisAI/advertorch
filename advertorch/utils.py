@@ -167,7 +167,20 @@ def soft_thresh(lamda, x):
 
 
 def batch_l1_proj_flat(x, eps=1):
+    """
+    Implementation of L1 ball projection from:
 
+    https://stanford.edu/~jduchi/projects/DuchiShSiCh08.pdf
+
+    inspired from:
+
+    https://gist.github.com/daien/1272551/edd95a6154106f8e28209a1c7964623ef8397246
+
+    :param x: input data
+    :param eps: l1 radius
+
+    :return: tensor containing the projection.
+    """
     d = torch.abs(x)
     d = d.view(d.shape[0], -1).sum(dim=1)
     indexes_b = torch.nonzero(d > eps).view(-1)
