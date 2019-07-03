@@ -20,6 +20,7 @@ from advertorch.attacks import LinfBasicIterativeAttack
 from advertorch.attacks import GradientAttack
 from advertorch.attacks import L2BasicIterativeAttack
 from advertorch.attacks import LinfPGDAttack
+from advertorch.attacks import L1PGDAttack
 from advertorch.attacks import SparseL1DescentAttack
 from advertorch.attacks import MomentumIterativeAttack
 from advertorch.attacks import FastFeatureAttack
@@ -73,6 +74,7 @@ attack_kwargs = {
     JacobianSaliencyMapAttack: {"num_classes": NUM_CLASS, "gamma": 0.01},
     SpatialTransformAttack: {"num_classes": NUM_CLASS},
     SparseL1DescentAttack: {"rand_init": False, "nb_iter": 5},
+    L1PGDAttack: {"rand_init": False, "nb_iter": 5},
 
 }
 

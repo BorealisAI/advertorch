@@ -207,8 +207,10 @@ class LinfPGDAttack(PGDAttack):
             targeted=False):
         ord = np.inf
         super(LinfPGDAttack, self).__init__(
-            predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
-            clip_min, clip_max, ord, targeted)
+            predict=predict, loss_fn=loss_fn, eps=eps, nb_iter=nb_iter,
+            eps_iter=eps_iter, rand_init=rand_init, clip_min=clip_min,
+            clip_max=clip_max, targeted=targeted,
+            ord=ord)
 
 
 class L2PGDAttack(PGDAttack):
@@ -232,8 +234,10 @@ class L2PGDAttack(PGDAttack):
             targeted=False):
         ord = 2
         super(L2PGDAttack, self).__init__(
-            predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
-            clip_min, clip_max, ord, targeted)
+            predict=predict, loss_fn=loss_fn, eps=eps, nb_iter=nb_iter,
+            eps_iter=eps_iter, rand_init=rand_init, clip_min=clip_min,
+            clip_max=clip_max, targeted=targeted,
+            ord=ord)
 
 
 class L1PGDAttack(PGDAttack):
@@ -252,14 +256,15 @@ class L1PGDAttack(PGDAttack):
     """
 
     def __init__(
-            self, predict, loss_fn=None, eps=0.3, nb_iter=40,
+            self, predict, loss_fn=None, eps=10., nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
             targeted=False):
         ord = 1
-        l1_pgd = True
-        super(L2PGDAttack, self).__init__(
-            predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
-            clip_min, clip_max, ord, targeted, l1_pgd)
+        super(L1PGDAttack, self).__init__(
+            predict=predict, loss_fn=loss_fn, eps=eps, nb_iter=nb_iter,
+            eps_iter=eps_iter, rand_init=rand_init, clip_min=clip_min,
+            clip_max=clip_max, targeted=targeted,
+            ord=ord, l1_pgd=True)
 
 
 class SparseL1DescentAttack(PGDAttack):
@@ -284,8 +289,10 @@ class SparseL1DescentAttack(PGDAttack):
             targeted=False):
         ord = 1
         super(SparseL1DescentAttack, self).__init__(
-            predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
-            clip_min, clip_max, ord, l1_sparsity, targeted)
+            predict=predict, loss_fn=loss_fn, eps=eps, nb_iter=nb_iter,
+            eps_iter=eps_iter, rand_init=rand_init, clip_min=clip_min,
+            clip_max=clip_max, targeted=targeted,
+            ord=ord, l1_sparsity=l1_sparsity)
 
 
 class SparseL1DescentAttack(PGDAttack):
