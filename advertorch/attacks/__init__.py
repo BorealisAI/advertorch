@@ -21,7 +21,7 @@ from .iterative_projected_gradient import LinfBasicIterativeAttack
 from .iterative_projected_gradient import PGDAttack
 from .iterative_projected_gradient import LinfPGDAttack
 from .iterative_projected_gradient import L2PGDAttack
-from .iterative_projected_gradient import SparseL1Attack
+from .iterative_projected_gradient import SparseL1DescentAttack
 from .iterative_projected_gradient import MomentumIterativeAttack
 from .iterative_projected_gradient import L2MomentumIterativeAttack
 from .iterative_projected_gradient import LinfMomentumIterativeAttack

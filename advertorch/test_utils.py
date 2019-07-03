@@ -18,7 +18,7 @@ from advertorch.attacks import CarliniWagnerL2Attack
 from advertorch.attacks import FastFeatureAttack
 from advertorch.attacks import MomentumIterativeAttack
 from advertorch.attacks import LinfPGDAttack
-from advertorch.attacks import SparseL1Attack
+from advertorch.attacks import SparseL1DescentAttack
 from advertorch.attacks import L2BasicIterativeAttack
 from advertorch.attacks import GradientAttack
 from advertorch.attacks import LinfBasicIterativeAttack
@@ -223,7 +223,7 @@ general_input_attacks = [
     LBFGSAttack,
     JacobianSaliencyMapAttack,
     SinglePixelAttack,
-    SparseL1Attack,
+    SparseL1DescentAttack,
 
 ]
 
@@ -243,7 +243,7 @@ label_attacks = [
     LBFGSAttack,
     JacobianSaliencyMapAttack,
     SpatialTransformAttack,
-    SparseL1Attack,
+    SparseL1DescentAttack,
 
 ]
 
@@ -260,7 +260,7 @@ batch_consistent_attacks = [
     MomentumIterativeAttack,
     FastFeatureAttack,
     JacobianSaliencyMapAttack,
-    SparseL1Attack,
+    SparseL1DescentAttack,
     # CarliniWagnerL2Attack,  # XXX: not exactly sure: test says no
     # LBFGSAttack,  # XXX: not exactly sure: test says no
     # SpatialTransformAttack,  # XXX: not exactly sure: test says no

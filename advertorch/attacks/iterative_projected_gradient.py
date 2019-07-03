@@ -30,7 +30,7 @@ from .utils import rand_init_delta
 
 def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
                       delta_init=None, minimize=False, ord=np.inf,
-                      clip_min=0.0, clip_max=1.0, sparsity=0.95):
+                      clip_min=0.0, clip_max=1.0, l1_sparsity=0.95):
     """
     Iteratively maximize the loss over the input. It is a shared method for
     iterative attacks including IterativeGradientSign, LinfPGD, etc.
@@ -86,10 +86,9 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
             batch_size = grad.size(0)
             view = abs_grad.view(batch_size, -1)
             view_size = view.size(1)
-            vals, idx = view.topk(int((1-sparsity)*view_size))
+            vals, idx = view.topk(int((1-l1_sparsity)*view_size))
 
             out = torch.zeros_like(view).scatter_(1, idx, vals)
-
             out = out.view_as(grad)
             grad = grad.sign()*(out > 0).float()
             grad = normalize_by_pnorm(grad, p=1)
@@ -98,8 +97,8 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
             delta.data = batch_l1_proj(delta.data.cpu(), eps)
             if xvar.is_cuda:
                 delta.data = delta.data.cuda()
-            delta.data = clamp(xvar.data + delta.data, clip_min, clip_max
-                               ) - xvar.data
+            delta.data = clamp(xvar.data + delta.data, clip_min, clip_max)
+            delta = delta - xvar.data
         else:
             error = "Only ord = inf, ord = 1 and ord = 2 have been implemented"
             raise NotImplementedError(error)
@@ -131,7 +130,7 @@ class PGDAttack(Attack, LabelMixin):
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
-            ord=np.inf, sparsity=0.95, targeted=False):
+            ord=np.inf, l1_sparsity=0.95, targeted=False):
         """
         Create an instance of the PGDAttack.
 
@@ -146,7 +145,7 @@ class PGDAttack(Attack, LabelMixin):
         self.targeted = targeted
         if self.loss_fn is None:
             self.loss_fn = nn.CrossEntropyLoss(reduction="sum")
-        self.sparsity = sparsity
+        self.l1_sparsity = l1_sparsity
 
         assert is_float_or_torch_tensor(self.eps_iter)
         assert is_float_or_torch_tensor(self.eps)
@@ -233,7 +232,7 @@ class L2PGDAttack(PGDAttack):
             clip_min, clip_max, ord, targeted)
 
 
-class SparseL1Attack(PGDAttack):
+class SparseL1DescentAttack(PGDAttack):
     """
     PGD Attack with order=Linf
 
@@ -250,12 +249,12 @@ class SparseL1Attack(PGDAttack):
 
     def __init__(
             self, predict, loss_fn=None, eps=0.3, nb_iter=40,
-            eps_iter=0.01, rand_init=False, clip_min=0., clip_max=1., sparsity=0.95,
+            eps_iter=0.01, rand_init=False, clip_min=0., clip_max=1., l1_sparsity=0.95,
             targeted=False):
         ord = 1
-        super(SparseL1Attack, self).__init__(
+        super(SparseL1DescentAttack, self).__init__(
             predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
-            clip_min, clip_max, ord, sparsity, targeted)
+            clip_min, clip_max, ord, l1_sparsity, targeted)
 
 
 class L2BasicIterativeAttack(PGDAttack):
