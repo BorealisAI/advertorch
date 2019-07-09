@@ -92,39 +92,26 @@ class ElasticNetL1Attack(Attack, LabelMixin):
         self.decision_rule = decision_rule
 
 
-    def _loss_fn(self, output, y_onehot, l1dist, l2distsq, const):
+    def _loss_fn(self, output, y_onehot, l1dist, l2distsq, const, opt=False):
 
         real = (y_onehot * output).sum(dim=1)
         other = ((1.0 - y_onehot) * output - (y_onehot * TARGET_MULT)).max(1)[0]
 
         if self.targeted:
-            loss1 = clamp(other - real + self.confidence, min=0.)
+            loss_logits = clamp(other - real + self.confidence, min=0.)
         else:
-            loss1 = clamp(real - other + self.confidence, min=0.)
+            loss_logits = clamp(real - other + self.confidence, min=0.)
+        loss_logits = torch.sum(const * loss_logits)
 
-        loss21 = l1dist.sum()
-        loss2 = l2distsq.sum()
+        loss_l2 = l2distsq.sum()
 
-        loss1 = torch.sum(const * loss1)
-
-        loss = loss1 + loss2 + (self.beta * loss21)
+        if opt:
+          loss = loss_logits + loss_l2
+        else:
+          loss_l1 = self.beta * l1dist.sum()
+          loss = loss_logits + loss_l2 + loss_l1
         return loss
 
-
-    def _loss_opt_fn(self, output_y, y_onehot, l2distsq_y, const):
-
-        real_y = (y_onehot * output_y).sum(dim=1)
-        other_y = ((1.0 - y_onehot) * output_y - (y_onehot * TARGET_MULT)).max(1)[0]
-
-        if self.targeted:
-            loss1_y = clamp(other_y - real_y + self.confidence, min=0.)
-        else:
-            loss1_y = clamp(real_y - other_y + self.confidence, min=0.)
-
-        loss1_y = torch.sum(const * loss1_y)
-        loss2_y = l2distsq_y.sum()
-        loss_opt = loss1_y + loss2_y
-        return loss_opt
 
     def _is_successful(self, output, label, is_logits):
         # determine success, see if confidence-adjusted logits give the right
