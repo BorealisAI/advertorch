@@ -166,7 +166,7 @@ def soft_thresh(lamda, x):
     return mag * sign
 
 
-def batch_l1_proj_flat(x, eps=1):
+def batch_l1_proj_flat(x, z=1):
     """
     Implementation of L1 ball projection from:
 
@@ -181,24 +181,32 @@ def batch_l1_proj_flat(x, eps=1):
 
     :return: tensor containing the projection.
     """
-    d = torch.abs(x)
-    d = d.view(d.shape[0], -1).sum(dim=1)
-    indexes_b = torch.nonzero(d > eps).view(-1)
+
+    # Computing the l1 norm of v
+    v = torch.abs(x)
+    v = v.sum(dim=1)
+
+    # Getting the elements to project in the batch
+    indexes_b = torch.nonzero(v > z).view(-1)
     x_b = x[indexes_b]
     batch_size_b = x_b.size(0)
+
+    # If all elements are in the l1-ball, return x
     if batch_size_b == 0:
         return x
-    view = x_b.view(batch_size_b, -1)
+
+    # make the projection on l1 ball for elements outside the ball
+    view = x_b
     view_size = view.size(1)
-    s = view.abs().sort(1, descending=True)[0]
-    if x.is_cuda:
-        vv = torch.arange(view_size).float().cuda()
-    else:
-        vv = torch.arange(view_size).float()
-    st = (s.cumsum(1)-eps)/(vv+1)
-    u = (s-st) > 0
-    idx = (1-u).cumsum(dim=1).eq(0).sum(1)-1
-    proj_x_b = soft_thresh(st.gather(1, idx.unsqueeze(1)), x_b)
+    mu = view.abs().sort(1, descending=True)[0]
+    vv = torch.arange(view_size).float().to(x.device)
+    st = (mu.cumsum(1)-z)/(vv+1)
+    u = (mu-st) > 0
+    rho = (1-u).cumsum(dim=1).eq(0).sum(1)-1
+    theta = st.gather(1, rho.unsqueeze(1))
+    proj_x_b = soft_thresh(theta, x_b)
+
+    # gather all the projected batch
     proj_x = x
     proj_x[indexes_b] = proj_x_b
     return proj_x
@@ -207,7 +215,7 @@ def batch_l1_proj_flat(x, eps=1):
 def batch_l1_proj(x, eps):
     batch_size = x.size(0)
     view = x.view(batch_size, -1)
-    proj_flat = batch_l1_proj_flat(view, eps)
+    proj_flat = batch_l1_proj_flat(view, z=eps)
     return proj_flat.view_as(x)
 
 
