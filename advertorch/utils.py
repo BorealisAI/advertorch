@@ -215,24 +215,6 @@ def jacobian(model, x, output_class):
     return xvar.grad.detach().clone()
 
 
-def polynomial_decay(optimizer, learning_rate, global_step, decay_steps,
-          end_learning_rate=0.0001, power=1.0, cycle=False):
-
-    if not cycle:
-        global_step = min(global_step, decay_steps)
-        decayed_learning_rate = \
-          (learning_rate - end_learning_rate) * \
-             (1 - global_step / decay_steps)**power + end_learning_rate
-    else:
-        decay_steps = decay_steps * math.ceil(global_step / decay_steps)
-        decayed_learning_rate = \
-            (learning_rate - end_learning_rate) * \
-               (1 - global_step / decay_steps)**power + end_learning_rate
-
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = decayed_learning_rate
-
-
 MNIST_MEAN = (0.1307,)
 MNIST_STD = (0.3081,)
 
