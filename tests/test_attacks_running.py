@@ -23,6 +23,7 @@ from advertorch.attacks import LinfPGDAttack
 from advertorch.attacks import MomentumIterativeAttack
 from advertorch.attacks import FastFeatureAttack
 from advertorch.attacks import CarliniWagnerL2Attack
+from advertorch.attacks import ElasticNetL1Attack
 from advertorch.attacks import LBFGSAttack
 from advertorch.attacks import JacobianSaliencyMapAttack
 from advertorch.attacks import SpatialTransformAttack
@@ -67,6 +68,7 @@ attack_kwargs = {
     LinfPGDAttack: {"rand_init": False, "nb_iter": 5},
     MomentumIterativeAttack: {"nb_iter": 5},
     CarliniWagnerL2Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
+    ElasticNetL1Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
     FastFeatureAttack: {"rand_init": False, "nb_iter": 5},
     LBFGSAttack: {"num_classes": NUM_CLASS},
     JacobianSaliencyMapAttack: {"num_classes": NUM_CLASS, "gamma": 0.01},

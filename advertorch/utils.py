@@ -9,11 +9,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import math
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 def torch_allclose(x, y, rtol=1.e-5, atol=1.e-8):
     """
@@ -49,6 +49,11 @@ def replicate_input_withgrad(x):
 
 def calc_l2distsq(x, y):
     d = (x - y)**2
+    return d.view(d.shape[0], -1).sum(dim=1)
+
+
+def calc_l1dist(x, y):
+    d = torch.abs(x - y)
     return d.view(d.shape[0], -1).sum(dim=1)
 
 
