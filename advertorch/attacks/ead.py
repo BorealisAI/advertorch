@@ -20,7 +20,6 @@ from advertorch.utils import torch_arctanh
 from advertorch.utils import clamp
 from advertorch.utils import to_one_hot
 from advertorch.utils import replicate_input
-from advertorch.utils import polynomial_decay
 
 from .base import Attack
 from .base import LabelMixin
@@ -79,6 +78,7 @@ class ElasticNetL1Attack(Attack, LabelMixin):
             predict, loss_fn, clip_min, clip_max)
 
         self.learning_rate = learning_rate
+        self.init_learning_rate = learning_rate
         self.max_iterations = max_iterations
         self.binary_search_steps = binary_search_steps
         self.abort_early = abort_early
@@ -131,48 +131,21 @@ class ElasticNetL1Attack(Attack, LabelMixin):
         return is_successful(pred, label, self.targeted)
 
 
-    def _fast_iterative_shrinkage_thresholding(self, x, slack, newimg):
+    def _fast_iterative_shrinkage_thresholding(self, x, yy_k, xx_k):
 
         zt = self.global_step / (self.global_step + 3)
 
-        upper = clamp(slack - self.beta, max=self.clip_max)
-        lower = clamp(slack + self.beta, min=self.clip_min)
+        upper = clamp(yy_k - self.beta, max=self.clip_max)
+        lower = clamp(yy_k + self.beta, min=self.clip_min)
 
-        diff = slack - x
+        diff = yy_k - x
         cond1 = (diff > self.beta).float()
         cond2 = (torch.abs(diff) <= self.beta).float()
         cond3 = (diff < -self.beta).float()
 
-        assign_newimg = (cond1 * upper) + (cond2 * x) + (cond3 * lower)
-        slack.data = assign_newimg + (zt * (assign_newimg - newimg))
-        return slack, assign_newimg
-
-
-    def train(self, optimizer, x, slack, y_onehot, loss_coeffs):
-        optimizer.zero_grad()
-        output_y = self.predict(slack)
-        l2distsq_y = calc_l2distsq(slack, x)
-        loss_opt = self._loss_opt_fn(output_y, y_onehot, l2distsq_y, loss_coeffs)
-        loss_opt.backward()
-        optimizer.step()
-        self.global_step += 1
-        return slack
-
-
-    def run(self, x, newimg, y_onehot, loss_coeffs):
-
-        output = self.predict(newimg)
-
-        l2distsq = calc_l2distsq(newimg, x)
-        l1dist = calc_l1dist(newimg, x)
-
-        if self.decision_rule == 'EN':
-          crit = l2distsq + (l1dist * self.beta)
-        elif self.decision_rule == 'L1':
-          crit = l1dist
-
-        loss = self._loss_fn(output, y_onehot, l1dist, l2distsq, loss_coeffs)
-        return loss.item(), crit.data, output.data
+        xx_k_p_1 = (cond1 * upper) + (cond2 * x) + (cond3 * lower)
+        yy_k.data = xx_k_p_1 + (zt * (xx_k_p_1 - xx_k))
+        return yy_k, xx_k_p_1
 
 
     def _update_if_smaller_dist_succeed(
@@ -250,10 +223,9 @@ class ElasticNetL1Attack(Attack, LabelMixin):
 
             self.global_step = 0
 
-            slack = nn.Parameter(x.clone())
-            newimg = x.clone()
-
-            optimizer = optim.SGD([slack], lr=self.learning_rate)
+            # slack vector from the paper
+            yy_k = nn.Parameter(x.clone())
+            xx_k = x.clone()
 
             cur_dist = [DIST_UPPER] * batch_size
             cur_labels = [INVALID_LABEL] * batch_size
@@ -266,22 +238,44 @@ class ElasticNetL1Attack(Attack, LabelMixin):
             if (self.repeat and outer_step == (self.binary_search_steps - 1)):
                 loss_coeffs = coeff_upper_bound
 
+            lr = self.learning_rate
+
             for ii in range(self.max_iterations):
 
-                self.train(optimizer, x, slack, y_onehot, loss_coeffs)
+                # reset gradient
+                if yy_k.grad is not None:
+                  yy_k.grad.detach_()
+                  yy_k.grad.zero_()
 
-                polynomial_decay(optimizer,
-                    self.learning_rate,
-                    self.global_step,
-                    self.max_iterations,
-                    0,
-                    power=0.5)
+                # loss over yy_k with only L2 same as C&W
+                # we don't update L1 loss with SGD because we use ISTA
+                output = self.predict(yy_k)
+                l2distsq = calc_l2distsq(yy_k, x)
+                loss_opt = self._loss_fn(
+                  output, y_onehot, None, l2distsq, loss_coeffs, opt=True)
+                loss_opt.backward()
 
-                slack, newimg  = self._fast_iterative_shrinkage_thresholding(
-                  x, slack, newimg)
-                loss, dist, output = self.run(
-                  x, newimg, y_onehot, loss_coeffs)
-                adv_img = newimg.data
+                # gradient step
+                yy_k.data.add_(-lr, yy_k.grad.data)
+                self.global_step += 1
+
+                # ploynomial decay of learning rate
+                lr = self.init_learning_rate * \
+                     (1 - self.global_step / self.max_iterations)**0.5
+
+                yy_k, xx_k  = self._fast_iterative_shrinkage_thresholding(
+                  x, yy_k, xx_k)
+
+                # loss ElasticNet or L1 over xx_k
+                output = self.predict(xx_k)
+                l2distsq = calc_l2distsq(xx_k, x)
+                l1dist = calc_l1dist(xx_k, x)
+
+                if self.decision_rule == 'EN':
+                  dist = l2distsq + (l1dist * self.beta)
+                elif self.decision_rule == 'L1':
+                  dist = l1dist
+                loss = self._loss_fn(output, y_onehot, l1dist, l2distsq, loss_coeffs)
 
                 if self.abort_early:
                     if ii % (self.max_iterations // NUM_CHECKS or 1) == 0:
@@ -290,7 +284,7 @@ class ElasticNetL1Attack(Attack, LabelMixin):
                         prevloss = loss
 
                 self._update_if_smaller_dist_succeed(
-                  adv_img, y, output, dist, batch_size,
+                  xx_k.data, y, output, dist, batch_size,
                   cur_dist, cur_labels,
                   final_dist, final_labels, final_advs)
 
