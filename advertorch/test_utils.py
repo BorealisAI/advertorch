@@ -226,7 +226,6 @@ general_input_attacks = [
     SinglePixelAttack,
     SparseL1DescentAttack,
     L1PGDAttack,
-
 ]
 
 image_only_attacks = [
@@ -247,7 +246,6 @@ label_attacks = [
     SpatialTransformAttack,
     SparseL1DescentAttack,
     L1PGDAttack,
-
 ]
 
 feature_attacks = [

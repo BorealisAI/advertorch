@@ -33,7 +33,7 @@ def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
     #   1) uniform sample in the data domain, then truncate using the L2 ball
     #       (implemented)
     #   2) uniform sample in the L2 ball, then truncate using the data domain
-    # for L1: implemented uniform l1 ball init
+    # for L1: uniform l1 ball init, then truncate using the data domain
 
     if isinstance(eps, torch.Tensor):
         assert len(eps) == len(delta)
@@ -51,6 +51,7 @@ def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
         delta.data = normalize_by_pnorm(delta.data, p=1)
         ray = uniform.Uniform(0, eps).sample()
         delta.data *= ray
+        delta.data = clamp(x.data + delta.data, clip_min, clip_max) - x.data
     else:
         error = "Only ord = inf, ord = 1 and ord = 2 have been implemented"
         raise NotImplementedError(error)
