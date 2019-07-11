@@ -156,14 +156,8 @@ def _get_norm_batch(x, p):
     return x.abs().pow(p).view(batch_size, -1).sum(dim=1).pow(1. / p)
 
 
-def soft_thresh(lamda, x):
-    abs_input = torch.abs(x)
-    sign = x.sign()
-
-    mag = abs_input - lamda
-    mag = (torch.abs(mag) + mag) / 2
-
-    return mag * sign
+def _thresh_by_magnitude(theta, x):
+    return torch.relu(torch.abs(x) - theta) * x.sign()
 
 
 def batch_l1_proj_flat(x, z=1):
@@ -204,7 +198,7 @@ def batch_l1_proj_flat(x, z=1):
     u = (mu-st) > 0
     rho = (1-u).cumsum(dim=1).eq(0).sum(1)-1
     theta = st.gather(1, rho.unsqueeze(1))
-    proj_x_b = soft_thresh(theta, x_b)
+    proj_x_b = _thresh_by_magnitude(theta, x_b)
 
     # gather all the projected batch
     proj_x = x
