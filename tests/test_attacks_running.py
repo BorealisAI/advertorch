@@ -20,6 +20,8 @@ from advertorch.attacks import LinfBasicIterativeAttack
 from advertorch.attacks import GradientAttack
 from advertorch.attacks import L2BasicIterativeAttack
 from advertorch.attacks import LinfPGDAttack
+from advertorch.attacks import L1PGDAttack
+from advertorch.attacks import SparseL1DescentAttack
 from advertorch.attacks import MomentumIterativeAttack
 from advertorch.attacks import FastFeatureAttack
 from advertorch.attacks import CarliniWagnerL2Attack
@@ -73,6 +75,9 @@ attack_kwargs = {
     LBFGSAttack: {"num_classes": NUM_CLASS},
     JacobianSaliencyMapAttack: {"num_classes": NUM_CLASS, "gamma": 0.01},
     SpatialTransformAttack: {"num_classes": NUM_CLASS},
+    SparseL1DescentAttack: {"rand_init": False, "nb_iter": 5},
+    L1PGDAttack: {"rand_init": False, "nb_iter": 5},
+
 }
 
 
@@ -162,9 +167,11 @@ def _run_batch_consistent(data, label, model, att_cls, idx):
     model.to(cpu)
     data, label_or_guide = data.to(cpu), label_or_guide.to(cpu)
     adversary = att_cls(model, **attack_kwargs[att_cls])
-    assert torch_allclose(
-        adversary.perturb(data, label_or_guide)[idx:idx + 1],
-        adversary.perturb(data[idx:idx + 1], label_or_guide[idx:idx + 1]))
+    torch.manual_seed(0)
+    a = adversary.perturb(data, label_or_guide)[idx:idx + 1]
+    torch.manual_seed(0)
+    b = adversary.perturb(data[idx:idx + 1], label_or_guide[idx:idx + 1])
+    assert torch_allclose(a, b)
 
 
 @pytest.mark.parametrize(
