@@ -1,0 +1,6 @@
+Authors contributed more than 100 lines, ordered by first contribution.
+
+Gavin Weiguang Ding <gavin.w.ding@gmail.com>
+Luyu Wang <wanglouis49@gmail.com>
+Xiaomeng Jin <tracy.jin@mail.utoronto.ca>
+Jérôme Rony <jerome.rony.1@etsmtl.net>
