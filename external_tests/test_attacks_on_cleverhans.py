@@ -21,6 +21,7 @@ import torch.utils.data
 import tensorflow as tf
 
 from cleverhans.attacks import CarliniWagnerL2
+from cleverhans.attacks import ElasticNetMethod
 from cleverhans.attacks import FastGradientMethod
 from cleverhans.attacks import MomentumIterativeMethod
 from cleverhans.attacks import MadryEtAl
@@ -31,6 +32,7 @@ from cleverhans.attacks import SaliencyMapMethod
 from cleverhans.model import Model as ClModel
 
 from advertorch.attacks import CarliniWagnerL2Attack
+from advertorch.attacks import ElasticNetL1Attack
 from advertorch.attacks import GradientAttack
 from advertorch.attacks import GradientSignAttack
 from advertorch.attacks import L2MomentumIterativeAttack
@@ -226,6 +228,28 @@ attack_kwargs = {
     },
     CarliniWagnerL2Attack: {
         "cl_class": CarliniWagnerL2,
+        "kwargs": dict(
+            max_iterations=100,
+            clip_min=0,
+            clip_max=1,
+            binary_search_steps=9,
+            learning_rate=0.1,
+            confidence=0.1,
+        ),
+        "at_kwargs": dict(
+            num_classes=NUM_CLASS,
+        ),
+        "cl_kwargs": dict(
+            batch_size=BATCH_SIZE,
+            initial_const=1e-3,
+        ),
+        "thresholds": dict(
+            atol=ATOL,
+            rtol=RTOL,
+        ),
+    },
+    ElasticNetL1Attack: {
+        "cl_class": ElasticNetMethod,
         "kwargs": dict(
             max_iterations=100,
             clip_min=0,
@@ -544,6 +568,14 @@ def test_carlini_l2_attack(targeted):
     compare_attacks(
         CarliniWagnerL2Attack,
         attack_kwargs[CarliniWagnerL2Attack],
+        targeted)
+
+
+@pytest.mark.parametrize("targeted", [False, True])
+def test_elasticnet_l1_attack(targeted):
+    compare_attacks(
+        ElasticNetL1Attack,
+        attack_kwargs[ElasticNetL1Attack],
         targeted)
 
 

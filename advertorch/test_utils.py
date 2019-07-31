@@ -20,10 +20,13 @@ from advertorch.attacks import DDNL2Attack
 from advertorch.attacks import FastFeatureAttack
 from advertorch.attacks import MomentumIterativeAttack
 from advertorch.attacks import LinfPGDAttack
+from advertorch.attacks import SparseL1DescentAttack
+from advertorch.attacks import L1PGDAttack
 from advertorch.attacks import L2BasicIterativeAttack
 from advertorch.attacks import GradientAttack
 from advertorch.attacks import LinfBasicIterativeAttack
 from advertorch.attacks import GradientSignAttack
+from advertorch.attacks import ElasticNetL1Attack
 from advertorch.defenses import JPEGFilter
 from advertorch.defenses import BitSqueezing
 from advertorch.defenses import MedianSmoothing2D
@@ -123,7 +126,6 @@ class MLP(nn.Module):
 # model and data generation functions for testing
 
 
-
 def generate_random_toy_data(clip_min=0., clip_max=1.):
     data = torch.Tensor(BATCH_SIZE, DIM_INPUT).uniform_(clip_min, clip_max)
     label = torch.LongTensor(BATCH_SIZE).random_(NUM_CLASS)
@@ -208,10 +210,8 @@ general_input_defenses = [
 ]
 
 
-
 # ###########################################################
 # construct groups and configs needed for testing attacks
-
 
 
 # as opposed to image-only
@@ -224,10 +224,13 @@ general_input_attacks = [
     MomentumIterativeAttack,
     FastFeatureAttack,
     CarliniWagnerL2Attack,
+    ElasticNetL1Attack,
     LBFGSAttack,
     JacobianSaliencyMapAttack,
     SinglePixelAttack,
     DDNL2Attack,
+    SparseL1DescentAttack,
+    L1PGDAttack,
 ]
 
 image_only_attacks = [
@@ -243,10 +246,13 @@ label_attacks = [
     LinfPGDAttack,
     MomentumIterativeAttack,
     CarliniWagnerL2Attack,
+    ElasticNetL1Attack,
     LBFGSAttack,
     JacobianSaliencyMapAttack,
     SpatialTransformAttack,
-    DDNL2Attack
+    DDNL2Attack,
+    SparseL1DescentAttack,
+    L1PGDAttack,
 ]
 
 feature_attacks = [
@@ -262,7 +268,9 @@ batch_consistent_attacks = [
     MomentumIterativeAttack,
     FastFeatureAttack,
     JacobianSaliencyMapAttack,
-    DDNL2Attack
+    DDNL2Attack,
+    SparseL1DescentAttack,
+    L1PGDAttack,
     # CarliniWagnerL2Attack,  # XXX: not exactly sure: test says no
     # LBFGSAttack,  # XXX: not exactly sure: test says no
     # SpatialTransformAttack,  # XXX: not exactly sure: test says no
