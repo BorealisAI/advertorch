@@ -1,4 +1,5 @@
-# Copyright (c) 2018-present, Royal Bank of Canada.
+# Copyright (c) 2018-present, Royal Bank of Canada and other authors.
+# See the AUTHORS.txt file for a list of contributors.
 # All rights reserved.
 #
 # This source code is licensed under the license found in the
@@ -25,6 +26,7 @@ from advertorch.attacks import SparseL1DescentAttack
 from advertorch.attacks import MomentumIterativeAttack
 from advertorch.attacks import FastFeatureAttack
 from advertorch.attacks import CarliniWagnerL2Attack
+from advertorch.attacks import DDNL2Attack
 from advertorch.attacks import ElasticNetL1Attack
 from advertorch.attacks import LBFGSAttack
 from advertorch.attacks import JacobianSaliencyMapAttack
@@ -75,9 +77,9 @@ attack_kwargs = {
     LBFGSAttack: {"num_classes": NUM_CLASS},
     JacobianSaliencyMapAttack: {"num_classes": NUM_CLASS, "gamma": 0.01},
     SpatialTransformAttack: {"num_classes": NUM_CLASS},
+    DDNL2Attack: {"nb_iter": 5},
     SparseL1DescentAttack: {"rand_init": False, "nb_iter": 5},
     L1PGDAttack: {"rand_init": False, "nb_iter": 5},
-
 }
 
 

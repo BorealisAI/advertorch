@@ -1,4 +1,5 @@
-# Copyright (c) 2018-present, Royal Bank of Canada.
+# Copyright (c) 2018-present, Royal Bank of Canada and other authors.
+# See the AUTHORS.txt file for a list of contributors.
 # All rights reserved.
 #
 # This source code is licensed under the license found in the
@@ -29,6 +30,8 @@ from .iterative_projected_gradient import LinfMomentumIterativeAttack
 
 from .carlini_wagner import CarliniWagnerL2Attack
 from .ead import ElasticNetL1Attack 
+
+from .decoupled_direction_norm import DDNL2Attack
 
 from .lbfgs import LBFGSAttack
 

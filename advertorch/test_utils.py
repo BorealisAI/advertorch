@@ -1,4 +1,5 @@
-# Copyright (c) 2018-present, Royal Bank of Canada.
+# Copyright (c) 2018-present, Royal Bank of Canada and other authors.
+# See the AUTHORS.txt file for a list of contributors.
 # All rights reserved.
 #
 # This source code is licensed under the license found in the
@@ -15,6 +16,7 @@ from advertorch.attacks import SpatialTransformAttack
 from advertorch.attacks import JacobianSaliencyMapAttack
 from advertorch.attacks import LBFGSAttack
 from advertorch.attacks import CarliniWagnerL2Attack
+from advertorch.attacks import DDNL2Attack
 from advertorch.attacks import FastFeatureAttack
 from advertorch.attacks import MomentumIterativeAttack
 from advertorch.attacks import LinfPGDAttack
@@ -226,6 +228,7 @@ general_input_attacks = [
     LBFGSAttack,
     JacobianSaliencyMapAttack,
     SinglePixelAttack,
+    DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,
 ]
@@ -247,6 +250,7 @@ label_attacks = [
     LBFGSAttack,
     JacobianSaliencyMapAttack,
     SpatialTransformAttack,
+    DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,
 ]
@@ -264,6 +268,7 @@ batch_consistent_attacks = [
     MomentumIterativeAttack,
     FastFeatureAttack,
     JacobianSaliencyMapAttack,
+    DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,
     # CarliniWagnerL2Attack,  # XXX: not exactly sure: test says no
