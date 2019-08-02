@@ -3,4 +3,6 @@ Authors contributed more than 100 lines, ordered by first contribution.
 Gavin Weiguang Ding <gavin.w.ding@gmail.com>
 Luyu Wang <wanglouis49@gmail.com>
 Xiaomeng Jin <tracy.jin@mail.utoronto.ca>
+Laurent Meunier <laurent.meunier1995@gmail.com>
+Alexandre Araujo <alexandre.araujo@wavestone.com>
 Jérôme Rony <jerome.rony.1@etsmtl.net>
