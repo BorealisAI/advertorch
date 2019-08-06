@@ -62,7 +62,7 @@ class ConvSmoothing2D(Processor):
 class GaussianSmoothing2D(ConvSmoothing2D):
     """
     Gaussian Smoothing 2D.
-    
+
     :param sigma: sigma of the Gaussian.
     :param channels: number of channels in the output.
     :param kernel_size: aperture size.
@@ -117,8 +117,8 @@ def _generate_gaussian_kernel(sigma, channels, kernel_size=None):
     var = sigma ** 2
 
     gaussian_kernel = (
-        1. / (2. * math.pi * var)
-        * torch.exp(-(gridxy - mean).pow(2).sum(dim=0) / (2 * var))
+        1. / (2. * math.pi * var) *
+        torch.exp(-(gridxy - mean).pow(2).sum(dim=0) / (2 * var))
     )
 
     gaussian_kernel /= torch.sum(gaussian_kernel)

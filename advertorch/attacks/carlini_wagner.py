@@ -46,9 +46,11 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
     :param confidence: confidence of the adversarial examples.
     :param targeted: if the attack is targeted.
     :param learning_rate: the learning rate for the attack algorithm
-    :param binary_search_steps: number of binary search times to find the optimum
+    :param binary_search_steps: number of binary search times to find the
+        optimum
     :param max_iterations: the maximum number of iterations
-    :param abort_early: if set to true, abort early if getting stuck in local min
+    :param abort_early: if set to true, abort early if getting stuck in local
+        min
     :param initial_const: initial value of the constant c
     :param clip_min: mininum value per input dimension.
     :param clip_max: maximum value per input dimension.
@@ -111,9 +113,11 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
         if is_logits:
             output = output.detach().clone()
             if self.targeted:
-                output[torch.arange(len(label)).long(), label] -= self.confidence
+                output[torch.arange(len(label)).long(),
+                       label] -= self.confidence
             else:
-                output[torch.arange(len(label)).long(), label] += self.confidence
+                output[torch.arange(len(label)).long(),
+                       label] += self.confidence
             pred = torch.argmax(output, dim=1)
         else:
             pred = output

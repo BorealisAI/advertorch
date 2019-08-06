@@ -32,7 +32,7 @@ class SinglePixelAttack(Attack, LabelMixin):
     :param clip_min: mininum value per input dimension.
     :param clip_max: maximum value per input dimension.
     :param loss_fn: loss function
-    :param targeted: if the attack is targeted.   
+    :param targeted: if the attack is targeted.
     """
 
     def __init__(self, predict, max_pixels=100, clip_min=0.,

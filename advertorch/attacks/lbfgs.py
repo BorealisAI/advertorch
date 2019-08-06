@@ -34,7 +34,8 @@ class LBFGSAttack(Attack, LabelMixin):
     :param predict: forward pass function.
     :param num_classes: number of clasess.
     :param batch_size: number of samples in the batch
-    :param binary_search_steps: number of binary search times to find the optimum
+    :param binary_search_steps: number of binary search times to find the
+        optimum
     :param max_iterations: the maximum number of iterations
     :param initial_const: initial value of the constant c
     :param clip_min: mininum value per input dimension.
