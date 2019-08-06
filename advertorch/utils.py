@@ -10,11 +10,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-import math
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 
 def torch_allclose(x, y, rtol=1.e-5, atol=1.e-8):
     """
@@ -200,9 +200,9 @@ def batch_l1_proj_flat(x, z=1):
     view_size = view.size(1)
     mu = view.abs().sort(1, descending=True)[0]
     vv = torch.arange(view_size).float().to(x.device)
-    st = (mu.cumsum(1)-z)/(vv+1)
-    u = (mu-st) > 0
-    rho = (1-u).cumsum(dim=1).eq(0).sum(1)-1
+    st = (mu.cumsum(1) - z) / (vv + 1)
+    u = (mu - st) > 0
+    rho = (1 - u).cumsum(dim=1).eq(0).sum(1) - 1
     theta = st.gather(1, rho.unsqueeze(1))
     proj_x_b = _thresh_by_magnitude(theta, x_b)
 

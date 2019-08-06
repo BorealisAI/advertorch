@@ -37,8 +37,9 @@ class DDNL2Attack(Attack, LabelMixin):
     """
 
     def __init__(
-            self, predict, nb_iter=100, gamma=0.05, init_norm=1., quantize=True,
-            levels=256, clip_min=0., clip_max=1., targeted=False, loss_fn=None):
+            self, predict, nb_iter=100, gamma=0.05, init_norm=1.,
+            quantize=True, levels=256, clip_min=0., clip_max=1.,
+            targeted=False, loss_fn=None):
         """
         Decoupled Direction and Norm L2 Attack implementation in pytorch.
         """
@@ -102,7 +103,8 @@ class DDNL2Attack(Attack, LabelMixin):
             ce_loss = self.loss_fn(logits, y)
             loss = multiplier * ce_loss
 
-            is_adv = (pred_labels == y) if self.targeted else (pred_labels != y)
+            is_adv = (pred_labels == y) if self.targeted else (
+                pred_labels != y)
             is_smaller = l2 < best_l2
             is_both = is_adv * is_smaller
             best_l2[is_both] = l2[is_both]

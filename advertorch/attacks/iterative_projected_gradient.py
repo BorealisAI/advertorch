@@ -94,11 +94,12 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
             if l1_sparsity is None:
                 vals, idx = view.topk(1)
             else:
-                vals, idx = view.topk(int(np.round((1-l1_sparsity)*view_size)))
+                vals, idx = view.topk(
+                    int(np.round((1 - l1_sparsity) * view_size)))
 
             out = torch.zeros_like(view).scatter_(1, idx, vals)
             out = out.view_as(grad)
-            grad = grad.sign()*(out > 0).float()
+            grad = grad.sign() * (out > 0).float()
             grad = normalize_by_pnorm(grad, p=1)
             delta.data = delta.data + batch_multiply(eps_iter, grad)
 
@@ -431,8 +432,8 @@ class MomentumIterativeAttack(Attack, LabelMixin):
             elif self.ord == 2:
                 delta.data += self.eps_iter * normalize_by_pnorm(g, p=2)
                 delta.data *= clamp(
-                    (self.eps * normalize_by_pnorm(delta.data, p=2)
-                        / delta.data),
+                    (self.eps * normalize_by_pnorm(delta.data, p=2) /
+                        delta.data),
                     max=1.)
                 delta.data = clamp(
                     x + delta.data, min=self.clip_min, max=self.clip_max) - x

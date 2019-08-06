@@ -82,7 +82,7 @@ class GradientAttack(Attack, LabelMixin):
     """
     Perturbs the input with gradient (not gradient sign) of the loss wrt the
     input.
-    
+
     :param predict: forward pass function.
     :param loss_fn: loss function.
     :param eps: attack step size.

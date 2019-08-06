@@ -12,12 +12,9 @@ from __future__ import unicode_literals
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 
 from advertorch.utils import calc_l2distsq
 from advertorch.utils import calc_l1dist
-from advertorch.utils import tanh_rescale
-from advertorch.utils import torch_arctanh
 from advertorch.utils import clamp
 from advertorch.utils import to_one_hot
 from advertorch.utils import replicate_input
@@ -37,6 +34,7 @@ PREV_LOSS_INIT = 1e6
 TARGET_MULT = 10000
 NUM_CHECKS = 10
 
+
 class ElasticNetL1Attack(Attack, LabelMixin):
     """
     The ElasticNet L1 Attack, https://arxiv.org/abs/1709.04114
@@ -46,9 +44,11 @@ class ElasticNetL1Attack(Attack, LabelMixin):
     :param confidence: confidence of the adversarial examples.
     :param targeted: if the attack is targeted.
     :param learning_rate: the learning rate for the attack algorithm
-    :param binary_search_steps: number of binary search times to find the optimum
+    :param binary_search_steps: number of binary search times to find the
+        optimum
     :param max_iterations: the maximum number of iterations
-    :param abort_early: if set to true, abort early if getting stuck in local min
+    :param abort_early: if set to true, abort early if getting stuck in local
+        min
     :param initial_const: initial value of the constant c
     :param clip_min: mininum value per input dimension.
     :param clip_max: maximum value per input dimension.
@@ -58,6 +58,7 @@ class ElasticNetL1Attack(Attack, LabelMixin):
                           elastic-net or L1 distortion criterion.
     :param loss_fn: loss function
     """
+
     def __init__(self, predict, num_classes, confidence=0,
                  targeted=False, learning_rate=1e-2,
                  binary_search_steps=9, max_iterations=10000,
@@ -96,7 +97,8 @@ class ElasticNetL1Attack(Attack, LabelMixin):
     def _loss_fn(self, output, y_onehot, l1dist, l2distsq, const, opt=False):
 
         real = (y_onehot * output).sum(dim=1)
-        other = ((1.0 - y_onehot) * output - (y_onehot * TARGET_MULT)).max(1)[0]
+        other = ((1.0 - y_onehot) * output -
+                 (y_onehot * TARGET_MULT)).max(1)[0]
 
         if self.targeted:
             loss_logits = clamp(other - real + self.confidence, min=0.)
@@ -107,10 +109,10 @@ class ElasticNetL1Attack(Attack, LabelMixin):
         loss_l2 = l2distsq.sum()
 
         if opt:
-          loss = loss_logits + loss_l2
+            loss = loss_logits + loss_l2
         else:
-          loss_l1 = self.beta * l1dist.sum()
-          loss = loss_logits + loss_l2 + loss_l1
+            loss_l1 = self.beta * l1dist.sum()
+            loss = loss_logits + loss_l2 + loss_l1
         return loss
 
 
@@ -120,9 +122,11 @@ class ElasticNetL1Attack(Attack, LabelMixin):
         if is_logits:
             output = output.detach().clone()
             if self.targeted:
-                output[torch.arange(len(label)).long(), label] -= self.confidence
+                output[torch.arange(len(label)).long(),
+                       label] -= self.confidence
             else:
-                output[torch.arange(len(label)).long(), label] += self.confidence
+                output[torch.arange(len(label)).long(),
+                       label] += self.confidence
             pred = torch.argmax(output, dim=1)
         else:
             pred = output
@@ -245,15 +249,15 @@ class ElasticNetL1Attack(Attack, LabelMixin):
 
                 # reset gradient
                 if yy_k.grad is not None:
-                  yy_k.grad.detach_()
-                  yy_k.grad.zero_()
+                    yy_k.grad.detach_()
+                    yy_k.grad.zero_()
 
                 # loss over yy_k with only L2 same as C&W
                 # we don't update L1 loss with SGD because we use ISTA
                 output = self.predict(yy_k)
                 l2distsq = calc_l2distsq(yy_k, x)
                 loss_opt = self._loss_fn(
-                  output, y_onehot, None, l2distsq, loss_coeffs, opt=True)
+                    output, y_onehot, None, l2distsq, loss_coeffs, opt=True)
                 loss_opt.backward()
 
                 # gradient step
@@ -262,10 +266,10 @@ class ElasticNetL1Attack(Attack, LabelMixin):
 
                 # ploynomial decay of learning rate
                 lr = self.init_learning_rate * \
-                     (1 - self.global_step / self.max_iterations)**0.5
+                    (1 - self.global_step / self.max_iterations)**0.5
 
-                yy_k, xx_k  = self._fast_iterative_shrinkage_thresholding(
-                  x, yy_k, xx_k)
+                yy_k, xx_k = self._fast_iterative_shrinkage_thresholding(
+                    x, yy_k, xx_k)
 
                 # loss ElasticNet or L1 over xx_k
                 output = self.predict(xx_k)
@@ -273,10 +277,11 @@ class ElasticNetL1Attack(Attack, LabelMixin):
                 l1dist = calc_l1dist(xx_k, x)
 
                 if self.decision_rule == 'EN':
-                  dist = l2distsq + (l1dist * self.beta)
+                    dist = l2distsq + (l1dist * self.beta)
                 elif self.decision_rule == 'L1':
-                  dist = l1dist
-                loss = self._loss_fn(output, y_onehot, l1dist, l2distsq, loss_coeffs)
+                    dist = l1dist
+                loss = self._loss_fn(
+                    output, y_onehot, l1dist, l2distsq, loss_coeffs)
 
                 if self.abort_early:
                     if ii % (self.max_iterations // NUM_CHECKS or 1) == 0:
@@ -285,9 +290,9 @@ class ElasticNetL1Attack(Attack, LabelMixin):
                         prevloss = loss
 
                 self._update_if_smaller_dist_succeed(
-                  xx_k.data, y, output, dist, batch_size,
-                  cur_dist, cur_labels,
-                  final_dist, final_labels, final_advs)
+                    xx_k.data, y, output, dist, batch_size,
+                    cur_dist, cur_labels,
+                    final_dist, final_labels, final_advs)
 
             self._update_loss_coeffs(
                 y, cur_labels, batch_size,

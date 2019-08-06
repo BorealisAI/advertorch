@@ -2,6 +2,7 @@ language: python
 python:
     - 3.6
 before_install:
+    - travis_wait travis_retry pip install flake8
     - travis_wait travis_retry pip install torch
     - travis_wait travis_retry pip install torchvision
     - travis_wait travis_retry pip install tensorflow
@@ -12,4 +13,5 @@ before_install:
 install:
     - pip install -e .
 script:
+    - flake8 --exclude=build/*
     - pytest

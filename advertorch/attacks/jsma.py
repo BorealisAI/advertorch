@@ -72,11 +72,11 @@ class JacobianSaliencyMapAttack(Attack, LabelMixin):
         gradsum_other = self._sum_pair(grads_other, dim_x)
 
         if self.theta > 0:
-            scores_mask = (torch.gt(gradsum_target, 0)
-                           & torch.lt(gradsum_other, 0))
+            scores_mask = (
+                torch.gt(gradsum_target, 0) & torch.lt(gradsum_other, 0))
         else:
-            scores_mask = (torch.lt(gradsum_target, 0)
-                           & torch.gt(gradsum_other, 0))
+            scores_mask = (
+                torch.lt(gradsum_target, 0) & torch.gt(gradsum_other, 0))
 
         scores_mask &= self._and_pair(search_space.ne(0), dim_x)
         scores_mask[:, range(dim_x), range(dim_x)] = 0
