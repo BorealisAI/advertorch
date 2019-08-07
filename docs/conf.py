@@ -13,10 +13,10 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 # import os
-import os
-import sys
-sys.path.insert(0, os.path.abspath('../'))
+# import sys
+# sys.path.insert(0, os.path.abspath('.'))
 import advertorch
+import os
 import shutil
 import sys
 from unittest.mock import Mock
