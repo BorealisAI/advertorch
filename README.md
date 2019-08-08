@@ -91,7 +91,7 @@ This project is licensed under the LGPL. The terms and conditions can be found i
 If you use AdverTorch in your research, we kindly ask that you cite the following [technical report](https://arxiv.org/abs/1902.07623):
 
 ```
-@article{ding2018advertorch,
+@article{ding2019advertorch,
   title={{AdverTorch} v0.1: An Adversarial Robustness Toolbox based on PyTorch},
   author={Ding, Gavin Weiguang and Wang, Luyu and Jin, Xiaomeng},
   journal={arXiv preprint arXiv:1902.07623},
@@ -105,3 +105,6 @@ If you use AdverTorch in your research, we kindly ask that you cite the followin
 * [Gavin Weiguang Ding](https://gwding.github.io/)
 * Luyu Wang
 * Xiaomeng Jin
+* Laurent Meunier
+* Alexandre Araujo
+* Jérôme Rony
