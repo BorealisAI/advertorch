@@ -15,19 +15,15 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
-import advertorch
 import os
 import shutil
-import sys
-from unittest.mock import Mock
-
-
 if os.path.exists("_tutorials"):
     shutil.rmtree("_tutorials")
 os.makedirs("_tutorials")
 os.symlink(
     "../../advertorch_examples/tutorial_attack_defense_bpda_mnist.ipynb",
     "_tutorials/tutorial_attack_defense_bpda_mnist.ipynb")
+import sys  # noqa: F401
 sys.path.insert(0, os.path.abspath('..'))
 
 
@@ -56,6 +52,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # 'scipy._lib',
 # ]
 
+from unittest.mock import Mock  # noqa: F401
 # from sphinx.ext.autodoc.importer import _MockObject as Mock
 Mock.Module = object
 sys.modules['torch'] = Mock()
@@ -70,6 +67,7 @@ sys.modules['tensorflow'] = Mock()
 sys.modules['theano'] = Mock()
 sys.modules['theano.tensor'] = Mock()
 sys.modules['torch'] = Mock()
+sys.modules['torch.distributions'] = Mock()
 sys.modules['torch.nn'] = Mock()
 sys.modules['torch.nn.functional'] = Mock()
 sys.modules['torch.optim'] = Mock()
@@ -83,6 +81,8 @@ sys.modules['torchvision'] = Mock()
 sys.modules['randomstate'] = Mock()
 sys.modules['scipy._lib'] = Mock()
 
+# XXX: This import has to be after mock
+import advertorch  # noqa: F401
 
 
 # -- Project information -----------------------------------------------------

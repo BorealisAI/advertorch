@@ -18,10 +18,14 @@ Attacks
    PGDAttack
    LinfPGDAttack
    L2PGDAttack
+   L1PGDAttack
+   SparseL1DescentAttack
    MomentumIterativeAttack
    LinfMomentumIterativeAttack
    L2MomentumIterativeAttack
    CarliniWagnerL2Attack
+   ElasticNetL1Attack
+   DDNL2Attack
    LBFGSAttack
    SinglePixelAttack
    LocalSearchAttack
@@ -59,10 +63,22 @@ Detailed description
 .. autoclass:: L2PGDAttack
    :members:
 
+.. autoclass:: L1PGDAttack
+   :members:
+
+.. autoclass:: SparseL1DescentAttack
+   :members:
+
 .. autoclass:: MomentumIterativeAttack
    :members:
 
 .. autoclass:: CarliniWagnerL2Attack
+   :members:
+
+.. autoclass:: ElasticNetL1Attack
+   :members:
+
+.. autoclass:: DDNL2Attack
    :members:
 
 .. autoclass:: LBFGSAttack
