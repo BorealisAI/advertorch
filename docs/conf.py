@@ -26,6 +26,7 @@ os.symlink(
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
+import advertorch
 
 # autodoc_mock_imports = [
 # 'numpy',
@@ -81,7 +82,7 @@ sys.modules['torchvision'] = Mock()
 sys.modules['randomstate'] = Mock()
 sys.modules['scipy._lib'] = Mock()
 
-import advertorch
+# import advertorch
 
 
 # -- Project information -----------------------------------------------------
