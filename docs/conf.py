@@ -23,10 +23,9 @@ os.makedirs("_tutorials")
 os.symlink(
     "../../advertorch_examples/tutorial_attack_defense_bpda_mnist.ipynb",
     "_tutorials/tutorial_attack_defense_bpda_mnist.ipynb")
-import sys
+import sys  # noqa: F401
 sys.path.insert(0, os.path.abspath('..'))
 
-import advertorch
 
 # autodoc_mock_imports = [
 # 'numpy',
@@ -53,7 +52,7 @@ import advertorch
 # 'scipy._lib',
 # ]
 
-from unittest.mock import Mock
+from unittest.mock import Mock  # noqa: F401
 # from sphinx.ext.autodoc.importer import _MockObject as Mock
 Mock.Module = object
 sys.modules['torch'] = Mock()
@@ -82,7 +81,8 @@ sys.modules['torchvision'] = Mock()
 sys.modules['randomstate'] = Mock()
 sys.modules['scipy._lib'] = Mock()
 
-# import advertorch
+# XXX: This import has to be after mock
+import advertorch  # noqa: F401
 
 
 # -- Project information -----------------------------------------------------
