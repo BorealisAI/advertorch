@@ -207,7 +207,7 @@ def batch_l1_proj_flat(x, z=1):
     proj_x_b = _thresh_by_magnitude(theta, x_b)
 
     # gather all the projected batch
-    proj_x = x
+    proj_x = x.detach().clone()
     proj_x[indexes_b] = proj_x_b
     return proj_x
 
