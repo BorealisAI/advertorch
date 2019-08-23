@@ -144,7 +144,7 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
 
     def _get_arctanh_x(self, x):
         result = clamp((x - self.clip_min) / (self.clip_max - self.clip_min),
-                       min=self.clip_min, max=self.clip_max) * 2 - 1
+                       min=0., max=1.) * 2 - 1
         return torch_arctanh(result * ONE_MINUS_EPS)
 
     def _update_if_smaller_dist_succeed(
