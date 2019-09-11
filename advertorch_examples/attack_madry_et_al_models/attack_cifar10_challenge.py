@@ -26,3 +26,5 @@ label, pred, advpred = multiple_mini_batch_attack(
 print("Accuracy: {:.2f}%, Robust Accuracy: {:.2f}%".format(
     100. * (label == pred).sum().item() / len(label),
     100. * (label == advpred).sum().item() / len(label)))
+
+# Accuracy: 87.14%, Robust Accuracy: 45.69%
