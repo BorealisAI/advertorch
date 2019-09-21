@@ -16,6 +16,7 @@ import torch
 
 from torch.distributions import laplace
 from torch.distributions import uniform
+from torch.nn.modules.loss import _Loss
 
 from advertorch.utils import clamp
 from advertorch.utils import clamp_by_pnorm
@@ -89,3 +90,29 @@ class AttackConfig(object):
         adversary = self.AttackClass(*args, **self.kwargs)
         print(self.AttackClass, args, self.kwargs)
         return adversary
+
+
+class MarginalLoss(_Loss):
+
+    def forward(self, logits, targets):  # pylint: disable=arguments-differ
+        assert logits.shape[-1] >= 2
+        top_logits, top_classes = torch.topk(logits, 2, dim=-1)
+        target_logits = torch.index_select(logits, -1, targets)
+        max_nontarget_logits = torch.where(
+            top_classes[..., 0] == targets,
+            top_logits[..., 1],
+            top_logits[..., 0],
+        )
+
+        loss = max_nontarget_logits - target_logits
+
+        if self.reduction == "none":
+            pass
+        elif self.reduction == "sum":
+            loss = loss.sum()
+        elif self.reduction == "mean":
+            loss = loss.mean()
+        else:
+            raise ValueError("unknown reduction: '%s'" % (self.recution,))
+
+        return loss
