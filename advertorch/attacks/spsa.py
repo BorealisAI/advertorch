@@ -16,7 +16,7 @@ from .base import LabelMixin
 from .utils import MarginalLoss
 from ..utils import is_float_or_torch_tensor
 
-__all__ = ['SPSALinfAttack', 'spsa_grad', 'spsa_perturb']
+__all__ = ['LinfSPSAAttack', 'spsa_grad', 'spsa_perturb']
 
 
 def clamp_(dx, x, eps, clip_min, clip_max):
@@ -67,7 +67,7 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
     return x_adv
 
 
-class SPSALinfAttack(Attack, LabelMixin):
+class LinfSPSAAttack(Attack, LabelMixin):
 
     def __init__(self, predict, eps, delta=0.01, lr=0.01, nb_iter=1,
                  nb_sample=128, targeted=False, loss_fn=None,
@@ -75,7 +75,7 @@ class SPSALinfAttack(Attack, LabelMixin):
 
         if loss_fn is None:
             loss_fn = MarginalLoss(reduction="sum")
-        super(SPSALinfAttack, self).__init__(predict, loss_fn, clip_min, clip_max)
+        super(LinfSPSAAttack, self).__init__(predict, loss_fn, clip_min, clip_max)
 
         assert is_float_or_torch_tensor(eps)
         assert is_float_or_torch_tensor(delta)
