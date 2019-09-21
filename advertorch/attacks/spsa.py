@@ -29,13 +29,13 @@ def clamp_(dx, x, eps, clip_min, clip_max):
 @torch.no_grad()
 def spsa_grad(predict, loss_fn, x, y, v, delta):
     xshape = x.shape
-    x = x.view(-1, x.shape[1:])
-    y = y.view(-1, y.shape[1:])
-    v = v.view(-1, v.shape[1:])
+    x = x.view(-1, *x.shape[2:])
+    y = y.view(-1, *y.shape[2:])
+    v = v.view(-1, *v.shape[2:])
 
     f = lambda xvar, yvar: loss_fn(predict(xvar), yvar)
     # assumes v != 0
-    grad = f(x + delta * v, y) - f(x - delta * v, y) / (2 * delta * v)
+    grad = (f(x + delta * v, y) - f(x - delta * v, y)) / (2 * delta * v)
     
     grad = grad.view(*xshape).mean(dim=0, keepdim=True)
 
@@ -46,23 +46,25 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
                  nb_sample, clip_min=0.0, clip_max=1.0):
     """
     """
-    dx = x.new_zeros((1, *x.shape))
-    x = x.unsqueeze(0).expand(nb_sample, *x.shape)
-    y = y.unsqueeze(0).expand(nb_sample, *y.shape)
-    v = torch.empty_like(x)
-    optimizer = torch.optim.SGD([dx], lr=lr)
+    x = x.unsqueeze(0)
+    y = y.unsqueeze(0)
+    dx = torch.zeros_like(x)
+    x_ = x.expand(nb_sample, *x.shape[1:])
+    y_ = y.expand(nb_sample, *y.shape[1:])
+    v_ = torch.empty_like(x_)
+    optimizer = torch.optim.Adam([dx], lr=lr)
 
-    for _ in range(nb_iter):
+    for ii in range(nb_iter):
         optimizer.zero_grad()
-        v = v.bernoulli_()
-        v *= 2.0
-        v -= 1.0
-        grad = spsa_grad(predict, loss_fn, x, y, v, delta)
-        dx.grad = grad.sign()
+        v_ = v_.bernoulli_()
+        v_ *= 2.0
+        v_ -= 1.0
+        grad = spsa_grad(predict, loss_fn, x_ + dx, y_, v_, delta)
+        dx.grad = grad
         optimizer.step()
         dx = clamp_(dx, x, eps, clip_min, clip_max)
-
-    x_adv = x[0] + dx[0]
+    
+    x_adv = (x + dx).squeeze(0)
     
     return x_adv
 
@@ -81,12 +83,12 @@ class LinfSPSAAttack(Attack, LabelMixin):
         assert is_float_or_torch_tensor(delta)
         assert is_float_or_torch_tensor(lr)
 
-        self.eps = eps
-        self.delta = delta
-        self.lr = lr
-        self.nb_iter = nb_iter
-        self.nb_sample = nb_sample
-        self.targeted = targeted
+        self.eps = float(eps)
+        self.delta = float(delta)
+        self.lr = float(lr)
+        self.nb_iter = int(nb_iter)
+        self.nb_sample = int(nb_sample)
+        self.targeted = bool(targeted)
 
     def perturb(self, x, y=None):  # pylint: disable=arguments-differ
         x, y = self._verify_and_process_inputs(x, y)
@@ -99,4 +101,3 @@ class LinfSPSAAttack(Attack, LabelMixin):
         return spsa_perturb(self.predict, loss, x, y, self.eps, self.delta,
                             self.lr, self.nb_iter, self.nb_sample,
                             self.clip_min, self.clip_max)
-    
