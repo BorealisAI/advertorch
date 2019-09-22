@@ -19,9 +19,10 @@ import torch
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
-ROOT_PATH = os.path.join(os.path.expanduser("~/.advertorch"), "data")
+ROOT_PATH = os.path.expanduser("~/.advertorch")
 DATA_PATH = os.path.join(ROOT_PATH, "data")
 MNIST_PATH = os.path.join(DATA_PATH, "mnist")
+CIFAR10_PATH = os.path.join(DATA_PATH, "cifar10")
 
 path_of_this_module = os.path.dirname(sys.modules[__name__].__file__)
 TRAINED_MODEL_PATH = os.path.join(path_of_this_module, "trained_models")
@@ -42,6 +43,20 @@ def get_mnist_test_loader(batch_size, shuffle=False):
     return torch.utils.data.DataLoader(
         datasets.MNIST(MNIST_PATH, train=False, download=True,
                        transform=transforms.ToTensor()),
+        batch_size=batch_size, shuffle=shuffle)
+
+
+def get_cifar10_train_loader(batch_size, shuffle=True):
+    return torch.utils.data.DataLoader(
+        datasets.CIFAR10(CIFAR10_PATH, train=True, download=True,
+                         transform=transforms.ToTensor()),
+        batch_size=batch_size, shuffle=shuffle)
+
+
+def get_cifar10_test_loader(batch_size, shuffle=False):
+    return torch.utils.data.DataLoader(
+        datasets.CIFAR10(CIFAR10_PATH, train=False, download=True,
+                         transform=transforms.ToTensor()),
         batch_size=batch_size, shuffle=shuffle)
 
 

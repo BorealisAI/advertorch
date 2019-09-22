@@ -22,6 +22,7 @@ from advertorch.utils import clamp
 from advertorch.utils import clamp_by_pnorm
 from advertorch.utils import batch_multiply
 from advertorch.utils import normalize_by_pnorm
+from advertorch.utils import predict_from_logits
 
 
 def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
@@ -90,6 +91,23 @@ class AttackConfig(object):
         adversary = self.AttackClass(*args, **self.kwargs)
         print(self.AttackClass, args, self.kwargs)
         return adversary
+
+
+def multiple_mini_batch_attack(adversary, loader, device="cuda"):
+    lst_label = []
+    lst_pred = []
+    lst_advpred = []
+
+    for data, label in loader:
+        data, label = data.to(device), label.to(device)
+        adv = adversary.perturb(data, label)
+        advpred = predict_from_logits(adversary.predict(adv))
+        pred = predict_from_logits(adversary.predict(data))
+        lst_label.append(label)
+        lst_pred.append(pred)
+        lst_advpred.append(advpred)
+
+    return torch.cat(lst_label), torch.cat(lst_pred), torch.cat(lst_advpred)
 
 
 class MarginalLoss(_Loss):
