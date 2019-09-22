@@ -33,12 +33,12 @@ def spsa_grad(predict, loss_fn, x, y, v, delta):
     y = y.view(-1, *y.shape[2:])
     v = v.view(-1, *v.shape[2:])
 
-    f = lambda xvar, yvar: loss_fn(predict(xvar), yvar)
+    def f(xvar, yvar):
+        return loss_fn(predict(xvar), yvar)
+
     # assumes v != 0
     grad = (f(x + delta * v, y) - f(x - delta * v, y)) / (2 * delta * v)
-    
     grad = grad.view(*xshape).mean(dim=0, keepdim=True)
-
     return grad
 
 
@@ -63,9 +63,9 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
         dx.grad = grad
         optimizer.step()
         dx = clamp_(dx, x, eps, clip_min, clip_max)
-    
+
     x_adv = (x + dx).squeeze(0)
-    
+
     return x_adv
 
 
@@ -77,7 +77,8 @@ class LinfSPSAAttack(Attack, LabelMixin):
 
         if loss_fn is None:
             loss_fn = MarginalLoss(reduction="sum")
-        super(LinfSPSAAttack, self).__init__(predict, loss_fn, clip_min, clip_max)
+        super(LinfSPSAAttack, self).__init__(predict, loss_fn,
+                                             clip_min, clip_max)
 
         assert is_float_or_torch_tensor(eps)
         assert is_float_or_torch_tensor(delta)
@@ -94,10 +95,13 @@ class LinfSPSAAttack(Attack, LabelMixin):
         x, y = self._verify_and_process_inputs(x, y)
 
         if self.targeted:
-            loss = self.loss_fn
+            def loss_fn(*args):
+                return self.loss_fn(*args)
+
         else:
-            loss = lambda *args: -self.loss_fn(*args)
-        
-        return spsa_perturb(self.predict, loss, x, y, self.eps, self.delta,
+            def loss_fn(*args):
+                return -self.loss_fn(*args)
+
+        return spsa_perturb(self.predict, loss_fn, x, y, self.eps, self.delta,
                             self.lr, self.nb_iter, self.nb_sample,
                             self.clip_min, self.clip_max)
