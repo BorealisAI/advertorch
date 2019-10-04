@@ -17,6 +17,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 from torch.autograd.gradcheck import zero_gradients
 #import numpy as np
+import time
 
 from advertorch.utils import calc_l2distsq
 from advertorch.utils import tanh_rescale
@@ -74,7 +75,7 @@ class FABattack(Attack, LabelMixin):
       self.targeted = False
       
     def get_diff_logits_grads_batch(self, imgs, la):
-      im = Variable(imgs.clone(), requires_grad=True)
+      im = imgs.clone().requires_grad_()
       with torch.enable_grad(): y = self.predict(im)
       g2 = self.compute_jacobian(im, y).detach()
       y2 = self.predict(imgs).detach()
@@ -159,7 +160,7 @@ class FABattack(Attack, LabelMixin):
         ub[ind32] = counter4[ind32]
         counter += 1
       
-      lb = lb.cpu().numpy().astype(int)
+      lb = lb.long()
       counter2 = 0
       
       if c_l.nelement != 0:  
@@ -171,6 +172,130 @@ class FABattack(Attack, LabelMixin):
   
       return (d*(w != 0).type(torch.cuda.FloatTensor))
       
+    def projection_l2(self, points_to_project, w_hyperplane, b_hyperplane):
+      t = points_to_project.clone().float()
+      w = w_hyperplane.clone().float()
+      b = b_hyperplane.clone().float()
+      
+      c = (w*t).sum(1) - b
+      ind2 = (c < 0).nonzero()
+      w[ind2] *= -1
+      c[ind2] *= -1
+      
+      u = torch.arange(0, w.shape[0]).unsqueeze(1)
+      
+      r = torch.max(t/w, (t-1)/w)
+      r = torch.min(r, 1e12*torch.ones(r.shape).cuda())
+      r = torch.max(r, -1e12*torch.ones(r.shape).cuda())
+      r[w.abs() < 1e-8] = 1e12
+      r[r == -1e12] = -r[r == -1e12]
+      rs, indr = torch.sort(r, dim=1)
+      rs2 = torch.cat((rs[:,1:], torch.zeros(rs.shape[0],1)),1)
+      rs[rs == 1e12] = 0
+      rs2[rs2 == 1e12] = 0
+      
+      w3 = w**2
+      w3s = w3[u, indr]
+      w5 = w3s.sum(dim=1, keepdim=True)
+      ws = w5 - torch.cumsum(w3s, dim=1)
+      d = -(r*w).clone()
+      d = d*(w.abs() > 1e-8).float()
+      s = torch.cat(((-w5.squeeze()*rs[:,0]).unsqueeze(1), torch.cumsum((-rs2 + rs)*ws, dim=1) - w5*rs[:,0].unsqueeze(-1)), 1)
+      
+      c4 = (s[:,0] + c < 0)
+      c3 = ((d*w).sum(dim=1) + c > 0)
+      c6 = c4.nonzero().squeeze()
+      c2 = ((1 - c4) * (1 - c3)).nonzero().squeeze()
+  
+      counter = 0
+      lb = torch.zeros(c2.shape[0])
+      ub = torch.ones(c2.shape[0])*(w.shape[1] - 1)
+      nitermax = torch.ceil(torch.log2(torch.tensor(w.shape[1]).float()))
+      counter2 = torch.zeros(lb.shape).type(torch.cuda.LongTensor)
+          
+      while counter < nitermax:
+        counter4 = torch.floor((lb + ub)/2)
+        counter2 = counter4.type(torch.cuda.LongTensor)
+        c3 = s[c2, counter2] + c[c2] > 0
+        ind3 = c3.nonzero().squeeze()
+        ind32 = (~c3).nonzero().squeeze()
+        lb[ind3] = counter4[ind3]
+        ub[ind32] = counter4[ind32]
+        
+        counter += 1
+      
+      lb = lb.long()
+      alpha = torch.zeros([1])
+      
+      if c6.nelement() != 0:
+        alpha = c[c6]/w5[c6].squeeze(-1)
+        d[c6] = -alpha.unsqueeze(-1)*w[c6]
+      
+      if c2.nelement() != 0:
+        alpha = (s[c2, lb] + c[c2])/ws[c2, lb] + rs[c2, lb]
+        if torch.sum(ws[c2, lb] == 0) > 0:
+          ind = (ws[c2,lb] == 0).nonzero().squeeze().long()
+          alpha[ind] = 0
+        c5 = (alpha.unsqueeze(-1) > r[c2]).float()
+        d[c2] = d[c2]*c5 - alpha.unsqueeze(-1)*w[c2]*(1 - c5)
+  
+      return d*(w.abs() > 1e-8).float()
+    
+    def projection_l1(self, points_to_project, w_hyperplane, b_hyperplane):
+      t = points_to_project.clone().float()
+      w = w_hyperplane.clone().float()
+      b = b_hyperplane.clone().float()
+    
+      c = (w*t).sum(1) - b
+      ind2 = (c < 0).nonzero()
+      w[ind2] *= -1
+      c[ind2] *= -1
+      
+      r = torch.max(1/w, -1/w)
+      r = torch.min(r, 1e12*torch.ones(r.shape).cuda())
+      rs, indr = torch.sort(r, dim=1)
+      _, indr_rev = torch.sort(indr)
+    
+      u = torch.arange(0, w.shape[0]).unsqueeze(1).cuda()
+      u2 = torch.arange(0, w.shape[1]).repeat(w.shape[0],1).cuda()
+      c6 = (w < 0).float()
+      d = (-t + c6)*(w != 0).float().cuda()
+      d2 = torch.min(-w*t, w*(1 - t))
+      ds = d2[u, indr]
+      ds2 = torch.cat((c.unsqueeze(-1), ds), 1)
+      s = torch.cumsum(ds2, dim=1)
+      
+      c4 = s[:,-1] < 0
+      c2 = c4.nonzero().squeeze(-1)
+      
+      counter = 0
+      lb = torch.zeros(c2.shape[0])
+      ub = torch.ones(c2.shape[0])*(s.shape[1])
+      nitermax = torch.ceil(torch.log2(torch.tensor(s.shape[1]).float()))
+      counter2 = torch.zeros(lb.shape).type(torch.cuda.LongTensor)
+          
+      while counter < nitermax:
+        counter4 = torch.floor((lb + ub)/2)
+        counter2 = counter4.type(torch.cuda.LongTensor)
+        c3 = s[c2, counter2] > 0
+        ind3 = c3.nonzero().squeeze()
+        ind32 = (~c3).nonzero().squeeze()
+        lb[ind3] = counter4[ind3]
+        ub[ind32] = counter4[ind32]
+        
+        counter += 1
+      
+      lb2 = lb.long()
+      
+      if c2.nelement() != 0:
+        alpha = -s[c2, lb2]/w[c2, indr[c2, lb2]]
+        c5 = u2[c2].float() < lb.unsqueeze(-1).float()
+        u3 = c5[u[:c5.shape[0]], indr_rev[c2]]
+        d[c2] = d[c2]*u3.float()
+        d[c2, indr[c2, lb2]] = alpha
+  
+      return d*(w.abs() > 1e-8).float()
+  
     def perturb(self, x, y):
       x, y = x.detach().clone().float().cuda(), y.detach().clone().long().cuda()
       y_pred = self._get_predicted_label(x)
@@ -179,6 +304,7 @@ class FABattack(Attack, LabelMixin):
       print('Clean accuracy: {:.2%}'.format(pred.float().mean()))
       pred = pred.nonzero().squeeze()
       
+      startt = time.time()
       # runs the attack only on correctly classified points
       im2 = replicate_input(x[pred])
       la2 = replicate_input(y[pred])
@@ -194,23 +320,38 @@ class FABattack(Attack, LabelMixin):
       
       while counter_restarts < self.n_restarts:
         if counter_restarts > 0:
-          t = 2*torch.rand(x1.shape) - 1
-          x1 = im2 + torch.min(res2, self.eps*torch.ones(res2.shape)).reshape([-1,1,1,1])*t/t.reshape([t.shape[0], -1]).abs().max(dim=1, keepdim=True)[0].reshape([-1,1,1,1])*0.5
+          if self.norm == 'Linf':
+            t = 2*torch.rand(x1.shape) - 1
+            x1 = im2 + torch.min(res2, self.eps*torch.ones(res2.shape)).reshape([-1,1,1,1])*t/t.reshape([t.shape[0], -1]).abs().max(dim=1, keepdim=True)[0].reshape([-1,1,1,1])*0.5
+          elif self.norm == 'L2':
+            t = torch.randn(x1.shape)
+            x1 = im2 + torch.min(res2, self.eps*torch.ones(res2.shape)).reshape([-1,1,1,1])*t/(t**2).sum(dim=(1,2,3), keepdim=True).sqrt()*0.5
+          elif self.norm == 'L1':
+            t = torch.randn(x1.shape)
+            x1 = im2 + torch.min(res2, self.eps*torch.ones(res2.shape)).reshape([-1,1,1,1])*t/t.abs().sum(dim=(1,2,3), keepdim=True)*0.5
+          
           x1 = x1.clamp(0.0, 1.0)
         
         counter_iter = 0
         while counter_iter < self.n_iter:
           df, dg = self.get_diff_logits_grads_batch(x1, la2)
-          dist1 = df.abs() / (1e-8 + dg.abs().sum(dim=(2,3,4)))
+          if self.norm == 'Linf': dist1 = df.abs() / (1e-12 + dg.abs().sum(dim=(2,3,4)))
+          elif self.norm == 'L2': dist1 = df.abs() / (1e-12 + (dg**2).sum(dim=(2,3,4)).sqrt())
+          elif self.norm == 'L1': dist1 = df.abs() / (1e-12 + dg.abs().reshape([df.shape[0], df.shape[1], -1]).max(dim=2)[0])
+          else: raise ValueError('norm not supported')
           ind = dist1.min(dim=1)[1]
           dg2 = dg[u1, ind]
           b = (- df[u1, ind] + (dg2*x1).sum(dim=(1,2,3)))
           w = dg2.reshape([bs, -1])
           
-          d3 = self.projection_linf(torch.cat((x1.reshape([bs, -1]),x0),0), torch.cat((w, w), 0), torch.cat((b, b),0))
+          if self.norm == 'Linf': d3 = self.projection_linf(torch.cat((x1.reshape([bs, -1]),x0),0), torch.cat((w, w), 0), torch.cat((b, b),0))
+          elif self.norm == 'L2': d3 = self.projection_l2(torch.cat((x1.reshape([bs, -1]),x0),0), torch.cat((w, w), 0), torch.cat((b, b),0))
+          elif self.norm == 'L1': d3 = self.projection_l1(torch.cat((x1.reshape([bs, -1]),x0),0), torch.cat((w, w), 0), torch.cat((b, b),0))
           d1 = torch.reshape(d3[:bs], x1.shape)
           d2 = torch.reshape(d3[-bs:], x1.shape)
-          a0 = d3.abs().max(dim=1, keepdim=True)[0].unsqueeze(-1).unsqueeze(-1)
+          if self.norm == 'Linf': a0 = d3.abs().max(dim=1, keepdim=True)[0].unsqueeze(-1).unsqueeze(-1)
+          elif self.norm == 'L2': a0 = (d3**2).sum(dim=1, keepdim=True).sqrt().unsqueeze(-1).unsqueeze(-1)
+          elif self.norm == 'L1': a0 = d3.abs().sum(dim=1, keepdim=True).unsqueeze(-1).unsqueeze(-1)
           a0 = torch.max(a0, 1e-8*torch.ones(a0.shape))
           a1 = a0[:bs]
           a2 = a0[-bs:]
@@ -221,7 +362,9 @@ class FABattack(Attack, LabelMixin):
           
           if is_adv.sum() > 0:
             ind_adv = is_adv.nonzero().squeeze()
-            t = (x1[ind_adv] - im2[ind_adv]).reshape([ind_adv.shape[0], -1]).abs().max(dim=1)[0]
+            if self.norm == 'Linf': t = (x1[ind_adv] - im2[ind_adv]).reshape([ind_adv.shape[0], -1]).abs().max(dim=1)[0]
+            elif self.norm == 'L2': t = ((x1[ind_adv] - im2[ind_adv])**2).sum(dim=(-3,-2,-1)).sqrt()
+            elif self.norm == 'L1': t = (x1[ind_adv] - im2[ind_adv]).abs().sum(dim=(-3,-2,-1))
             adv[ind_adv] = x1[ind_adv] * (t < res2[ind_adv]).float().reshape([-1,1,1,1]) + adv[ind_adv]*(t >= res2[ind_adv]).float().reshape([-1,1,1,1])
             res2[ind_adv] = t * (t < res2[ind_adv]).float() + res2[ind_adv]*(t >= res2[ind_adv]).float()
             x1[ind_adv] = im2[ind_adv] + (x1[ind_adv] - im2[ind_adv])*self.beta
@@ -231,13 +374,10 @@ class FABattack(Attack, LabelMixin):
         counter_restarts += 1
       
       ind_succ = res2 < 1e10
-      print('success rate: {:.0f}/{:.0f} (on correctly classified points)'.format(ind_succ.float().sum(), corr_classified))
-      #print('check norms: ', (im2 - adv).abs().reshape([bs, -1]).max(dim=1)[0][:10])
+      print('success rate: {:.0f}/{:.0f} (on correctly classified points) in {:.1f} s'.format(ind_succ.float().sum(), corr_classified, time.time() - startt))
       
       res_c[pred] = res2*ind_succ.float() + 1e10*(1 - ind_succ.float())
       ind_succ = ind_succ.nonzero().squeeze()
-      #print(ind_succ, pred)
       adv_c[pred[ind_succ]] = adv[ind_succ].clone()
-      #print('check norms: ', (x - adv_c).abs().reshape([x.shape[0], -1]).max(dim=1)[0][:10])
       
-      return res2, adv_c
+      return res_c, adv_c
