@@ -13,32 +13,22 @@ from __future__ import unicode_literals
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 from torch.autograd.gradcheck import zero_gradients
 import time
 
-from advertorch.utils import calc_l2distsq
-from advertorch.utils import tanh_rescale
-from advertorch.utils import torch_arctanh
-from advertorch.utils import clamp
-from advertorch.utils import to_one_hot
 from advertorch.utils import replicate_input
 
 from .base import Attack
 from .base import LabelMixin
-from .utils import is_successful
-
-torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 EPS_DICT = {'Linf': .3, 'L2': 1., 'L1': 5.0}
-
 
 class FABattack(Attack, LabelMixin):
     """
     Fast Adaptive Boundary Attack (Linf, L2, L1)
     https://arxiv.org/abs/1907.02044
 
-    :param predict:       forward pass function.
+    :param predict:       forward pass function
     :param norm:          Lp-norm to minimize ('Linf', 'L2', 'L1' supported)
     :param n_restarts:    number of random restarts
     :param n_iter:        number of iterations
@@ -46,6 +36,7 @@ class FABattack(Attack, LabelMixin):
     :param alpha_max:     alpha_max
     :param eta:           overshooting
     :param beta:          backward step
+    :param device:        device to use ('cuda' or 'cpu')
     """
 
     def __init__(self,
@@ -56,7 +47,8 @@ class FABattack(Attack, LabelMixin):
                  eps=-1,
                  alpha_max=0.1,
                  eta=1.05,
-                 beta=0.9):
+                 beta=0.9,
+                 device='cuda'):
       """ FAB-attack implementation in pytorch """
       loss_fn = None
 
@@ -71,7 +63,8 @@ class FABattack(Attack, LabelMixin):
       self.eta = eta
       self.beta = beta
       self.targeted = False
-      
+      self.device = device  
+    
     def get_diff_logits_grads_batch(self, imgs, la):
       im = imgs.clone().requires_grad_()
       with torch.enable_grad(): y = self.predict(im)
@@ -106,21 +99,20 @@ class FABattack(Attack, LabelMixin):
       return torch.transpose(jacobian, dim0=0, dim1=1)
       
     def projection_linf(self, points_to_project, w_hyperplane, b_hyperplane):
-      t = points_to_project.clone().float()
-      w = w_hyperplane.clone().float()
-      b = b_hyperplane.clone().float()
-      d = torch.zeros(t.shape).float()
+      t = points_to_project.clone()
+      w = w_hyperplane.clone()
+      b = b_hyperplane.clone()
       
       ind2 = ((w*t).sum(1) - b < 0).nonzero()
       w[ind2] *= -1
       b[ind2] *= -1
       
-      c5 = (w < 0).type(torch.cuda.FloatTensor)
-      a = torch.ones(t.shape).cuda()
-      d = (a*c5 - t)*(w != 0).type(torch.cuda.FloatTensor)
+      c5 = (w < 0).float().to(self.device)
+      a = torch.ones(t.shape).to(self.device)
+      d = (a*c5 - t)*(w != 0).float().to(self.device)
       a -= a*(1 - c5)
       
-      p = torch.ones(t.shape)*c5 - t*(2*c5 - 1)
+      p = torch.ones(t.shape).to(self.device)*c5 - t*(2*c5 - 1)
       indp = torch.argsort(p, dim=1)
   
       b = b - (w*t).sum(1)
@@ -144,11 +136,11 @@ class FABattack(Attack, LabelMixin):
       lb = torch.zeros(c2.shape[0])
       ub = torch.ones(c2.shape[0])*(w.shape[1] - 1)
       nitermax = torch.ceil(torch.log2(torch.tensor(w.shape[1]).float()))
-      counter2 = torch.zeros(lb.shape).type(torch.cuda.LongTensor)
+      counter2 = torch.zeros(lb.shape).long()
       
       while counter < nitermax:
         counter4 = torch.floor((lb + ub)/2)
-        counter2 = counter4.type(torch.cuda.LongTensor)
+        counter2 = counter4.long()
         indcurr = indp[c2, -counter2 - 1]
         b2 = sb[c2, counter2] - s[c2, counter2]*p[c2, indcurr]
         c = b[c2] - b2 > 0
@@ -162,18 +154,18 @@ class FABattack(Attack, LabelMixin):
       counter2 = 0
       
       if c_l.nelement != 0:  
-        lmbd_opt = (torch.max((b[c_l] - sb[c_l, -1])/(-s[c_l, -1]), torch.zeros(sb[c_l, -1].shape))).unsqueeze(-1)
+        lmbd_opt = (torch.max((b[c_l] - sb[c_l, -1])/(-s[c_l, -1]), torch.zeros(sb[c_l, -1].shape).to(self.device))).unsqueeze(-1)
         d[c_l] = (2*a[c_l] - 1)*lmbd_opt
         
-      lmbd_opt = (torch.max((b[c2] - sb[c2, lb])/(-s[c2, lb]), torch.zeros(sb[c2, lb].shape))).unsqueeze(-1)
+      lmbd_opt = (torch.max((b[c2] - sb[c2, lb])/(-s[c2, lb]), torch.zeros(sb[c2, lb].shape).to(self.device))).unsqueeze(-1)
       d[c2] = torch.min(lmbd_opt, d[c2])*c5[c2] + torch.max(-lmbd_opt, d[c2])*(1-c5[c2])
   
-      return (d*(w != 0).type(torch.cuda.FloatTensor))
+      return d*(w != 0).float()
       
     def projection_l2(self, points_to_project, w_hyperplane, b_hyperplane):
-      t = points_to_project.clone().float()
-      w = w_hyperplane.clone().float()
-      b = b_hyperplane.clone().float()
+      t = points_to_project.clone()
+      w = w_hyperplane.clone()
+      b = b_hyperplane.clone()
       
       c = (w*t).sum(1) - b
       ind2 = (c < 0).nonzero()
@@ -183,12 +175,13 @@ class FABattack(Attack, LabelMixin):
       u = torch.arange(0, w.shape[0]).unsqueeze(1)
       
       r = torch.max(t/w, (t-1)/w)
-      r = torch.min(r, 1e12*torch.ones(r.shape).cuda())
-      r = torch.max(r, -1e12*torch.ones(r.shape).cuda())
+      u2 = torch.ones(r.shape).to(self.device)
+      r = torch.min(r, 1e12*u2)
+      r = torch.max(r, -1e12*u2)
       r[w.abs() < 1e-8] = 1e12
       r[r == -1e12] = -r[r == -1e12]
       rs, indr = torch.sort(r, dim=1)
-      rs2 = torch.cat((rs[:,1:], torch.zeros(rs.shape[0],1)),1)
+      rs2 = torch.cat((rs[:,1:], torch.zeros(rs.shape[0],1).to(self.device)),1)
       rs[rs == 1e12] = 0
       rs2[rs2 == 1e12] = 0
       
@@ -209,11 +202,11 @@ class FABattack(Attack, LabelMixin):
       lb = torch.zeros(c2.shape[0])
       ub = torch.ones(c2.shape[0])*(w.shape[1] - 1)
       nitermax = torch.ceil(torch.log2(torch.tensor(w.shape[1]).float()))
-      counter2 = torch.zeros(lb.shape).type(torch.cuda.LongTensor)
+      counter2 = torch.zeros(lb.shape).long()
           
       while counter < nitermax:
         counter4 = torch.floor((lb + ub)/2)
-        counter2 = counter4.type(torch.cuda.LongTensor)
+        counter2 = counter4.long()
         c3 = s[c2, counter2] + c[c2] > 0
         ind3 = c3.nonzero().squeeze()
         ind32 = (~c3).nonzero().squeeze()
@@ -240,9 +233,9 @@ class FABattack(Attack, LabelMixin):
       return d*(w.abs() > 1e-8).float()
     
     def projection_l1(self, points_to_project, w_hyperplane, b_hyperplane):
-      t = points_to_project.clone().float()
-      w = w_hyperplane.clone().float()
-      b = b_hyperplane.clone().float()
+      t = points_to_project.clone()
+      w = w_hyperplane.clone()
+      b = b_hyperplane.clone()
     
       c = (w*t).sum(1) - b
       ind2 = (c < 0).nonzero()
@@ -250,14 +243,14 @@ class FABattack(Attack, LabelMixin):
       c[ind2] *= -1
       
       r = torch.max(1/w, -1/w)
-      r = torch.min(r, 1e12*torch.ones(r.shape).cuda())
+      r = torch.min(r, 1e12*torch.ones(r.shape).to(self.device))
       rs, indr = torch.sort(r, dim=1)
       _, indr_rev = torch.sort(indr)
     
-      u = torch.arange(0, w.shape[0]).unsqueeze(1).cuda()
-      u2 = torch.arange(0, w.shape[1]).repeat(w.shape[0],1).cuda()
+      u = torch.arange(0, w.shape[0]).unsqueeze(1)
+      u2 = torch.arange(0, w.shape[1]).repeat(w.shape[0],1)
       c6 = (w < 0).float()
-      d = (-t + c6)*(w != 0).float().cuda()
+      d = (-t + c6)*(w != 0).float()
       d2 = torch.min(-w*t, w*(1 - t))
       ds = d2[u, indr]
       ds2 = torch.cat((c.unsqueeze(-1), ds), 1)
@@ -270,11 +263,11 @@ class FABattack(Attack, LabelMixin):
       lb = torch.zeros(c2.shape[0])
       ub = torch.ones(c2.shape[0])*(s.shape[1])
       nitermax = torch.ceil(torch.log2(torch.tensor(s.shape[1]).float()))
-      counter2 = torch.zeros(lb.shape).type(torch.cuda.LongTensor)
+      counter2 = torch.zeros(lb.shape).long()
           
       while counter < nitermax:
         counter4 = torch.floor((lb + ub)/2)
-        counter2 = counter4.type(torch.cuda.LongTensor)
+        counter2 = counter4.long()
         c3 = s[c2, counter2] > 0
         ind3 = c3.nonzero().squeeze()
         ind32 = (~c3).nonzero().squeeze()
@@ -289,13 +282,13 @@ class FABattack(Attack, LabelMixin):
         alpha = -s[c2, lb2]/w[c2, indr[c2, lb2]]
         c5 = u2[c2].float() < lb.unsqueeze(-1).float()
         u3 = c5[u[:c5.shape[0]], indr_rev[c2]]
-        d[c2] = d[c2]*u3.float()
+        d[c2] = d[c2]*u3.float().to(self.device)
         d[c2, indr[c2, lb2]] = alpha
   
       return d*(w.abs() > 1e-8).float()
   
     def perturb(self, x, y):
-      x, y = x.detach().clone().float().cuda(), y.detach().clone().long().cuda()
+      x, y = x.detach().clone().float().to(self.device), y.detach().clone().long().to(self.device)
       y_pred = self._get_predicted_label(x)
       pred = y_pred == y
       corr_classified = pred.float().sum()
@@ -310,8 +303,8 @@ class FABattack(Attack, LabelMixin):
       u1 = torch.arange(bs)
       adv = im2.clone()
       adv_c = x.clone()
-      res2 = 1e10*torch.ones([bs])
-      res_c = torch.zeros([x.shape[0]])
+      res2 = 1e10*torch.ones([bs]).to(self.device)
+      res_c = torch.zeros([x.shape[0]]).to(self.device)
       x1 = im2.clone()
       x0 = im2.clone().reshape([bs, -1])
       counter_restarts = 0
@@ -319,14 +312,14 @@ class FABattack(Attack, LabelMixin):
       while counter_restarts < self.n_restarts:
         if counter_restarts > 0:
           if self.norm == 'Linf':
-            t = 2*torch.rand(x1.shape) - 1
-            x1 = im2 + torch.min(res2, self.eps*torch.ones(res2.shape)).reshape([-1,1,1,1])*t/t.reshape([t.shape[0], -1]).abs().max(dim=1, keepdim=True)[0].reshape([-1,1,1,1])*0.5
+            t = 2*torch.rand(x1.shape).to(self.device) - 1
+            x1 = im2 + torch.min(res2, self.eps*torch.ones(res2.shape).to(self.device)).reshape([-1,1,1,1])*t/t.reshape([t.shape[0], -1]).abs().max(dim=1, keepdim=True)[0].reshape([-1,1,1,1])*0.5
           elif self.norm == 'L2':
-            t = torch.randn(x1.shape)
-            x1 = im2 + torch.min(res2, self.eps*torch.ones(res2.shape)).reshape([-1,1,1,1])*t/(t**2).sum(dim=(1,2,3), keepdim=True).sqrt()*0.5
+            t = torch.randn(x1.shape).to(self.device)
+            x1 = im2 + torch.min(res2, self.eps*torch.ones(res2.shape).to(self.device)).reshape([-1,1,1,1])*t/(t**2).sum(dim=(1,2,3), keepdim=True).sqrt()*0.5
           elif self.norm == 'L1':
-            t = torch.randn(x1.shape)
-            x1 = im2 + torch.min(res2, self.eps*torch.ones(res2.shape)).reshape([-1,1,1,1])*t/t.abs().sum(dim=(1,2,3), keepdim=True)*0.5
+            t = torch.randn(x1.shape).to(self.device)
+            x1 = im2 + torch.min(res2, self.eps*torch.ones(res2.shape).to(self.device)).reshape([-1,1,1,1])*t/t.abs().sum(dim=(1,2,3), keepdim=True)*0.5
           
           x1 = x1.clamp(0.0, 1.0)
         
@@ -350,10 +343,10 @@ class FABattack(Attack, LabelMixin):
           if self.norm == 'Linf': a0 = d3.abs().max(dim=1, keepdim=True)[0].unsqueeze(-1).unsqueeze(-1)
           elif self.norm == 'L2': a0 = (d3**2).sum(dim=1, keepdim=True).sqrt().unsqueeze(-1).unsqueeze(-1)
           elif self.norm == 'L1': a0 = d3.abs().sum(dim=1, keepdim=True).unsqueeze(-1).unsqueeze(-1)
-          a0 = torch.max(a0, 1e-8*torch.ones(a0.shape))
+          a0 = torch.max(a0, 1e-8*torch.ones(a0.shape).to(self.device))
           a1 = a0[:bs]
           a2 = a0[-bs:]
-          alpha = torch.min(torch.max(a1/(a1 + a2), torch.zeros(a1.shape))[0], self.alpha_max*torch.ones(a1.shape))
+          alpha = torch.min(torch.max(a1/(a1 + a2), torch.zeros(a1.shape).to(self.device))[0], self.alpha_max*torch.ones(a1.shape).to(self.device))
           x1 = ((x1 + self.eta*d1)*(1 - alpha) + (im2 + d2*self.eta)*alpha).clamp(0.0, 1.0)
           
           is_adv = self._get_predicted_label(x1) != la2
