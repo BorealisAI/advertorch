@@ -107,9 +107,9 @@ class FABattack(Attack, LabelMixin):
       w[ind2] *= -1
       b[ind2] *= -1
       
-      c5 = (w < 0).float().to(self.device)
+      c5 = (w < 0).float()
       a = torch.ones(t.shape).to(self.device)
-      d = (a*c5 - t)*(w != 0).float().to(self.device)
+      d = (a*c5 - t)*(w != 0).float()
       a -= a*(1 - c5)
       
       p = torch.ones(t.shape).to(self.device)*c5 - t*(2*c5 - 1)
