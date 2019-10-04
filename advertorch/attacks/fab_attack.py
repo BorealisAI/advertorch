@@ -1,4 +1,4 @@
-# Copyright (c) 2018-present, Royal Bank of Canada.
+# Copyright (c) 2019-present, Francesco Croce
 # All rights reserved.
 #
 # This source code is licensed under the license found in the
@@ -14,9 +14,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from torch.autograd import Variable
 from torch.autograd.gradcheck import zero_gradients
-#import numpy as np
 import time
 
 from advertorch.utils import calc_l2distsq
