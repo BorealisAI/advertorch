@@ -126,7 +126,7 @@ class FABattack(Attack, LabelMixin):
         indp2 = indp.unsqueeze(-1).flip(dims=(1, 2)).squeeze()
         u = torch.arange(0, w.shape[0])
         ws = w[u.unsqueeze(1), indp2]
-        bs2 = - ws*d[u.unsqueeze(1), indp2]
+        bs2 = - ws * d[u.unsqueeze(1), indp2]
 
         s = torch.cumsum(ws.abs(), dim=1)
         sb = torch.cumsum(bs2, dim=1) + b0.unsqueeze(1)
@@ -157,7 +157,7 @@ class FABattack(Attack, LabelMixin):
         counter2 = 0
 
         if c_l.nelement != 0:
-            lmbd_opt = (torch.max((b[c_l] - sb[c_l, -1])/(-s[c_l, -1]),
+            lmbd_opt = (torch.max((b[c_l] - sb[c_l, -1]) / (-s[c_l, -1]),
                                   torch.zeros(sb[c_l, -1].shape)
                                   .to(self.device))).unsqueeze(-1)
             d[c_l] = (2 * a[c_l] - 1) * lmbd_opt
@@ -360,7 +360,7 @@ class FABattack(Attack, LabelMixin):
                                         + (dg ** 2).sum(dim=(2, 3, 4)).sqrt())
                 elif self.norm == 'L1':
                     dist1 = df.abs() / (1e-12 + dg.abs().reshape(
-                            [df.shape[0], df.shape[1], -1]).max(dim=2)[0])
+                        [df.shape[0], df.shape[1], -1]).max(dim=2)[0])
                 else:
                     raise ValueError('norm not supported')
                 ind = dist1.min(dim=1)[1]
@@ -370,30 +370,30 @@ class FABattack(Attack, LabelMixin):
 
                 if self.norm == 'Linf':
                     d3 = self.projection_linf(
-                            torch.cat((x1.reshape([bs, -1]), x0), 0),
-                            torch.cat((w, w), 0),
-                            torch.cat((b, b), 0))
+                        torch.cat((x1.reshape([bs, -1]), x0), 0),
+                        torch.cat((w, w), 0),
+                        torch.cat((b, b), 0))
                 elif self.norm == 'L2':
                     d3 = self.projection_l2(
-                            torch.cat((x1.reshape([bs, -1]), x0), 0),
-                            torch.cat((w, w), 0),
-                            torch.cat((b, b), 0))
+                        torch.cat((x1.reshape([bs, -1]), x0), 0),
+                        torch.cat((w, w), 0),
+                        torch.cat((b, b), 0))
                 elif self.norm == 'L1':
                     d3 = self.projection_l1(
-                            torch.cat((x1.reshape([bs, -1]), x0), 0),
-                            torch.cat((w, w), 0),
-                            torch.cat((b, b), 0))
+                        torch.cat((x1.reshape([bs, -1]), x0), 0),
+                        torch.cat((w, w), 0),
+                        torch.cat((b, b), 0))
                 d1 = torch.reshape(d3[:bs], x1.shape)
                 d2 = torch.reshape(d3[-bs:], x1.shape)
                 if self.norm == 'Linf':
                     a0 = d3.abs().max(dim=1, keepdim=True)[0]\
-                          .unsqueeze(-1).unsqueeze(-1)
+                        .unsqueeze(-1).unsqueeze(-1)
                 elif self.norm == 'L2':
                     a0 = (d3**2).sum(dim=1, keepdim=True).sqrt()\
-                          .unsqueeze(-1).unsqueeze(-1)
+                        .unsqueeze(-1).unsqueeze(-1)
                 elif self.norm == 'L1':
                     a0 = d3.abs().sum(dim=1, keepdim=True)\
-                          .unsqueeze(-1).unsqueeze(-1)
+                        .unsqueeze(-1).unsqueeze(-1)
                 a0 = torch.max(a0, 1e-8 * torch.ones(a0.shape).to(self.device))
                 a1 = a0[:bs]
                 a2 = a0[-bs:]
@@ -411,7 +411,7 @@ class FABattack(Attack, LabelMixin):
                     ind_adv = is_adv.nonzero().squeeze()
                     if self.norm == 'Linf':
                         t = (x1[ind_adv] - im2[ind_adv]).reshape(
-                                [ind_adv.shape[0], -1]).abs().max(dim=1)[0]
+                            [ind_adv.shape[0], -1]).abs().max(dim=1)[0]
                     elif self.norm == 'L2':
                         t = ((x1[ind_adv] - im2[ind_adv]) ** 2)\
                             .sum(dim=(-3, -2, -1)).sqrt()
