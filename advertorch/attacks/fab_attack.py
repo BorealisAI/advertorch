@@ -201,8 +201,8 @@ class FABattack(Attack, LabelMixin):
         d = -(r * w).clone()
         d = d * (w.abs() > 1e-8).float()
         s = torch.cat(((-w5.squeeze() * rs[:, 0]).unsqueeze(1),
-                      torch.cumsum((-rs2 + rs) * ws, dim=1)
-                      - w5 * rs[:, 0].unsqueeze(-1)), 1)
+                      torch.cumsum((-rs2 + rs) * ws, dim=1) -
+                      w5 * rs[:, 0].unsqueeze(-1)), 1)
 
         c4 = (s[:, 0] + c < 0)
         c3 = ((d * w).sum(dim=1) + c > 0)
@@ -356,8 +356,8 @@ class FABattack(Attack, LabelMixin):
                 if self.norm == 'Linf':
                     dist1 = df.abs() / (1e-12 + dg.abs().sum(dim=(2, 3, 4)))
                 elif self.norm == 'L2':
-                    dist1 = df.abs() / (1e-12
-                                        + (dg ** 2).sum(dim=(2, 3, 4)).sqrt())
+                    dist1 = df.abs() / (1e-12 +
+                                        (dg ** 2).sum(dim=(2, 3, 4)).sqrt())
                 elif self.norm == 'L1':
                     dist1 = df.abs() / (1e-12 + dg.abs().reshape(
                         [df.shape[0], df.shape[1], -1]).max(dim=2)[0])
@@ -402,8 +402,8 @@ class FABattack(Attack, LabelMixin):
                                             .to(self.device))[0],
                                   self.alpha_max * torch.ones(a1.shape)
                                   .to(self.device))
-                x1 = ((x1 + self.eta * d1) * (1 - alpha)
-                      + (im2 + d2 * self.eta) * alpha).clamp(0.0, 1.0)
+                x1 = ((x1 + self.eta * d1) * (1 - alpha) +
+                      (im2 + d2 * self.eta) * alpha).clamp(0.0, 1.0)
 
                 is_adv = self._get_predicted_label(x1) != la2
 
@@ -423,8 +423,8 @@ class FABattack(Attack, LabelMixin):
                         * (t >= res2[ind_adv]).float().reshape([-1, 1, 1, 1])
                     res2[ind_adv] = t * (t < res2[ind_adv]).float()\
                         + res2[ind_adv] * (t >= res2[ind_adv]).float()
-                    x1[ind_adv] = im2[ind_adv] + (x1[ind_adv]
-                                                  - im2[ind_adv]) * self.beta
+                    x1[ind_adv] = im2[ind_adv] + (x1[ind_adv] -
+                                                  im2[ind_adv]) * self.beta
 
                 counter_iter += 1
 
@@ -432,8 +432,8 @@ class FABattack(Attack, LabelMixin):
 
         ind_succ = res2 < 1e10
         print('success rate: {:.0f}/{:.0f}'
-              .format(ind_succ.float().sum(), corr_classified)
-              + ' (on correctly classified points) in {:.1f} s'
+              .format(ind_succ.float().sum(), corr_classified) +
+              ' (on correctly classified points) in {:.1f} s'
               .format(time.time() - startt))
 
         res_c[pred] = res2 * ind_succ.float() + 1e10 * (1 - ind_succ.float())
