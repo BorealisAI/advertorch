@@ -318,7 +318,7 @@ class FABAttack(Attack, LabelMixin):
         :param x:    clean images
         :param y:    clean labels, if None we use the predicted labels
         """
-        
+
         if self.device == 'none':
             self.device = x.device
 
@@ -336,7 +336,7 @@ class FABAttack(Attack, LabelMixin):
         if pred.sum() == 0:
             return x
         pred = self.check_shape(pred.nonzero().squeeze())
-        
+
         startt = time.time()
         # runs the attack only on correctly classified points
         im2 = replicate_input(x[pred])
