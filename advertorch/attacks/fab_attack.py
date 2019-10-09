@@ -64,7 +64,10 @@ class FABAttack(Attack, LabelMixin):
         self.beta = beta
         self.targeted = False
         self.device = device
-    
+
+    def check_shape(self, x):
+        return x if len(x.shape) > 0 else x.unsqueeze(0)
+
     def get_diff_logits_grads_batch(self, imgs, la):
         im = imgs.clone().requires_grad_()
         with torch.enable_grad():
@@ -105,7 +108,8 @@ class FABAttack(Attack, LabelMixin):
         w = w_hyperplane.clone()
         b = b_hyperplane.clone()
 
-        ind2 = ((w * t).sum(1) - b < 0).nonzero()
+        ind2 = ((w * t).sum(1) - b < 0).nonzero().squeeze()
+        ind2 = self.check_shape(ind2)
         w[ind2] *= -1
         b[ind2] *= -1
 
@@ -134,6 +138,8 @@ class FABAttack(Attack, LabelMixin):
         b2 = sb[u, -1] - s[u, -1] * p[u, indp[u, 0]]
         c_l = (b - b2 > 0).nonzero().squeeze()
         c2 = ((b - b1 > 0) * (b - b2 <= 0)).nonzero().squeeze()
+        c_l = self.check_shape(c_l)
+        c2 = self.check_shape(c2)
 
         lb = torch.zeros(c2.shape[0])
         ub = torch.ones(c2.shape[0]) * (w.shape[1] - 1)
@@ -148,6 +154,8 @@ class FABAttack(Attack, LabelMixin):
             c = b[c2] - b2 > 0
             ind3 = c.nonzero().squeeze()
             ind32 = (~c).nonzero().squeeze()
+            ind3 = self.check_shape(ind3)
+            ind32 = self.check_shape(ind32)
             lb[ind3] = counter4[ind3]
             ub[ind32] = counter4[ind32]
             counter += 1
@@ -175,7 +183,8 @@ class FABAttack(Attack, LabelMixin):
         b = b_hyperplane.clone()
 
         c = (w * t).sum(1) - b
-        ind2 = (c < 0).nonzero()
+        ind2 = (c < 0).nonzero().squeeze()
+        ind2 = self.check_shape(ind2)
         w[ind2] *= -1
         c[ind2] *= -1
 
@@ -207,6 +216,8 @@ class FABAttack(Attack, LabelMixin):
         c3 = ((d * w).sum(dim=1) + c > 0)
         c6 = c4.nonzero().squeeze()
         c2 = ((1 - c4) * (1 - c3)).nonzero().squeeze()
+        c6 = self.check_shape(c6)
+        c2 = self.check_shape(c2)
 
         counter = 0
         lb = torch.zeros(c2.shape[0])
@@ -220,6 +231,8 @@ class FABAttack(Attack, LabelMixin):
             c3 = s[c2, counter2] + c[c2] > 0
             ind3 = c3.nonzero().squeeze()
             ind32 = (~c3).nonzero().squeeze()
+            ind3 = self.check_shape(ind3)
+            ind32 = self.check_shape(ind32)
             lb[ind3] = counter4[ind3]
             ub[ind32] = counter4[ind32]
             counter += 1
@@ -235,6 +248,7 @@ class FABAttack(Attack, LabelMixin):
             alpha = (s[c2, lb] + c[c2]) / ws[c2, lb] + rs[c2, lb]
             if torch.sum(ws[c2, lb] == 0) > 0:
                 ind = (ws[c2, lb] == 0).nonzero().squeeze().long()
+                ind = self.check_shape(ind)
                 alpha[ind] = 0
             c5 = (alpha.unsqueeze(-1) > r[c2]).float()
             d[c2] = d[c2] * c5 - alpha.unsqueeze(-1) * w[c2] * (1 - c5)
@@ -247,7 +261,8 @@ class FABAttack(Attack, LabelMixin):
         b = b_hyperplane.clone()
 
         c = (w * t).sum(1) - b
-        ind2 = (c < 0).nonzero()
+        ind2 = (c < 0).nonzero().squeeze()
+        ind2 = self.check_shape(ind2)
         w[ind2] *= -1
         c[ind2] *= -1
 
@@ -267,6 +282,7 @@ class FABAttack(Attack, LabelMixin):
 
         c4 = s[:, -1] < 0
         c2 = c4.nonzero().squeeze(-1)
+        c2 = self.check_shape(c2)
 
         counter = 0
         lb = torch.zeros(c2.shape[0])
@@ -280,6 +296,8 @@ class FABAttack(Attack, LabelMixin):
             c3 = s[c2, counter2] > 0
             ind3 = c3.nonzero().squeeze()
             ind32 = (~c3).nonzero().squeeze()
+            ind3 = self.check_shape(ind3)
+            ind32 = self.check_shape(ind32)
             lb[ind3] = counter4[ind3]
             ub[ind32] = counter4[ind32]
             counter += 1
@@ -307,12 +325,16 @@ class FABAttack(Attack, LabelMixin):
         pred = y_pred == y
         corr_classified = pred.float().sum()
         print('Clean accuracy: {:.2%}'.format(pred.float().mean()))
-        pred = pred.nonzero().squeeze()
-
+        if pred.sum() == 0:
+            return x
+        pred = self.check_shape(pred.nonzero().squeeze())
+        
         startt = time.time()
         # runs the attack only on correctly classified points
         im2 = replicate_input(x[pred])
         la2 = replicate_input(y[pred])
+        if len(im2.shape) == 3:
+            im2 = im2.unsqueeze(0)
         bs = im2.shape[0]
         u1 = torch.arange(bs)
         adv = im2.clone()
@@ -413,6 +435,7 @@ class FABAttack(Attack, LabelMixin):
 
                 if is_adv.sum() > 0:
                     ind_adv = is_adv.nonzero().squeeze()
+                    ind_adv = self.check_shape(ind_adv)
                     if self.norm == 'Linf':
                         t = (x1[ind_adv] - im2[ind_adv]).reshape(
                             [ind_adv.shape[0], -1]).abs().max(dim=1)[0]
@@ -441,7 +464,7 @@ class FABAttack(Attack, LabelMixin):
               .format(time.time() - startt))
 
         res_c[pred] = res2 * ind_succ.float() + 1e10 * (1 - ind_succ.float())
-        ind_succ = ind_succ.nonzero().squeeze()
+        ind_succ = self.check_shape(ind_succ.nonzero().squeeze())
         adv_c[pred[ind_succ]] = adv[ind_succ].clone()
 
         return adv_c
