@@ -43,4 +43,4 @@ from .spatial import SpatialTransformAttack
 from .jsma import JacobianSaliencyMapAttack
 from .jsma import JSMA
 
-from .fab_attack import FABattack
+from .fab_attack import FABAttack

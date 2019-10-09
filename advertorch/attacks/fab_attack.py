@@ -22,7 +22,7 @@ from .base import LabelMixin
 EPS_DICT = {'Linf': .3, 'L2': 1., 'L1': 5.0}
 
 
-class FABattack(Attack, LabelMixin):
+class FABAttack(Attack, LabelMixin):
     """
     Fast Adaptive Boundary Attack (Linf, L2, L1)
     https://arxiv.org/abs/1907.02044
@@ -48,12 +48,12 @@ class FABattack(Attack, LabelMixin):
             alpha_max=0.1,
             eta=1.05,
             beta=0.9,
-            device='cuda'):
+            device='none'):
         """ FAB-attack implementation in pytorch """
 
         loss_fn = None
 
-        super(FABattack, self).__init__(
+        super(FABAttack, self).__init__(
             predict, loss_fn, clip_min=0., clip_max=1.)
 
         self.norm = norm
@@ -297,8 +297,13 @@ class FABattack(Attack, LabelMixin):
         return d * (w.abs() > 1e-8).float()
 
     def perturb(self, x, y):
+        if self.device == 'none':
+            self.device = x.device
+        
         x = x.detach().clone().float().to(self.device)
         y = y.detach().clone().long().to(self.device)
+        assert next(self.predict.parameters()).device == x.device
+        
         y_pred = self._get_predicted_label(x)
         pred = y_pred == y
         corr_classified = pred.float().sum()

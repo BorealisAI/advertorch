@@ -27,6 +27,7 @@ from advertorch.attacks import GradientAttack
 from advertorch.attacks import LinfBasicIterativeAttack
 from advertorch.attacks import GradientSignAttack
 from advertorch.attacks import ElasticNetL1Attack
+from advertorch.attacks import FABAttack
 from advertorch.defenses import JPEGFilter
 from advertorch.defenses import BitSqueezing
 from advertorch.defenses import MedianSmoothing2D
@@ -236,6 +237,7 @@ general_input_attacks = [
 image_only_attacks = [
     SpatialTransformAttack,
     LocalSearchAttack,
+    FABAttack,
 ]
 
 label_attacks = [
@@ -253,6 +255,7 @@ label_attacks = [
     DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,
+    FABAttack,
 ]
 
 feature_attacks = [
@@ -271,6 +274,7 @@ batch_consistent_attacks = [
     DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,
+    FABAttack,
     # CarliniWagnerL2Attack,  # XXX: not exactly sure: test says no
     # LBFGSAttack,  # XXX: not exactly sure: test says no
     # SpatialTransformAttack,  # XXX: not exactly sure: test says no
