@@ -48,13 +48,12 @@ class FABAttack(Attack, LabelMixin):
             alpha_max=0.1,
             eta=1.05,
             beta=0.9,
-            device='none'):
+            device='none',
+            loss_fn='none'):
         """ FAB-attack implementation in pytorch """
 
-        loss_fn = None
-
         super(FABAttack, self).__init__(
-            predict, loss_fn, clip_min=0., clip_max=1.)
+            predict, loss_fn=None, clip_min=0., clip_max=1.)
 
         self.norm = norm
         self.n_restarts = n_restarts
@@ -65,7 +64,7 @@ class FABAttack(Attack, LabelMixin):
         self.beta = beta
         self.targeted = False
         self.device = device
-
+    
     def get_diff_logits_grads_batch(self, imgs, la):
         im = imgs.clone().requires_grad_()
         with torch.enable_grad():
@@ -299,11 +298,11 @@ class FABAttack(Attack, LabelMixin):
     def perturb(self, x, y):
         if self.device == 'none':
             self.device = x.device
-        
+
         x = x.detach().clone().float().to(self.device)
         y = y.detach().clone().long().to(self.device)
         assert next(self.predict.parameters()).device == x.device
-        
+
         y_pred = self._get_predicted_label(x)
         pred = y_pred == y
         corr_classified = pred.float().sum()

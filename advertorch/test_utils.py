@@ -274,7 +274,7 @@ batch_consistent_attacks = [
     DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,
-    FABAttack,
+    # FABAttack,
     # CarliniWagnerL2Attack,  # XXX: not exactly sure: test says no
     # LBFGSAttack,  # XXX: not exactly sure: test says no
     # SpatialTransformAttack,  # XXX: not exactly sure: test says no
