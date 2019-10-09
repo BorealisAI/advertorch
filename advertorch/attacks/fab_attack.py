@@ -313,15 +313,23 @@ class FABAttack(Attack, LabelMixin):
 
         return d * (w.abs() > 1e-8).float()
 
-    def perturb(self, x, y):
+    def perturb(self, x, y=None):
+        """
+        :param x:    clean images
+        :param y:    clean labels, if None we use the predicted labels
+        """
+        
         if self.device == 'none':
             self.device = x.device
 
         x = x.detach().clone().float().to(self.device)
-        y = y.detach().clone().long().to(self.device)
         assert next(self.predict.parameters()).device == x.device
 
         y_pred = self._get_predicted_label(x)
+        if y is None:
+            y = y_pred.detach().clone().long().to(self.device)
+        else:
+            y = y.detach().clone().long().to(self.device)
         pred = y_pred == y
         corr_classified = pred.float().sum()
         print('Clean accuracy: {:.2%}'.format(pred.float().mean()))
