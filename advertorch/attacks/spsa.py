@@ -21,6 +21,17 @@ __all__ = ['LinfSPSAAttack', 'spsa_grad', 'spsa_perturb']
 
 def linf_clamp_(dx, x, eps, clip_min, clip_max):
     """Clamps perturbation `dx` to fit L_inf norm and image bounds.
+
+    Limit the L_inf norm of `dx` to be <= `eps`, and the bounds of `x + dx`
+    to be in `[clip_min, clip_max]`.
+
+    :param dx: perturbation to be clamped (inplace).
+    :param x: the image.
+    :param eps: maximum possible L_inf.
+    :param clip_min: upper bound of image values.
+    :param clip_max: lower bound of image values.
+
+    :return: the clamped perturbation `dx`.
     """
 
     dx_clamped = torch.clamp(dx, -eps, eps)
@@ -32,6 +43,19 @@ def linf_clamp_(dx, x, eps, clip_min, clip_max):
 @torch.no_grad()
 def spsa_grad(predict, loss_fn, x, y, v, delta):
     """Uses SPSA method to apprixmate gradient w.r.t `x`.
+
+    Use the SPSA method to approximate the gradient of `loss_fn(predict(x), y)`
+    with respect to `x`, based on the nonce `v`.
+
+    :param predict: predict function (single argument: input).
+    :param loss_fn: loss function (dual arguments: output, target).
+    :param x: input argument for function `predict`.
+    :param y: target argument for function `loss_fn`.
+    :param v: perturbations of `x`.
+    :param delta: scaling parameter of SPSA.
+
+    :return: return the approximated gradient of `loss_fn(predict(x), y)`
+             with respect to `x`.
     """
 
     xshape = x.shape
@@ -51,6 +75,21 @@ def spsa_grad(predict, loss_fn, x, y, v, delta):
 def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
                  nb_sample, max_batch_size, clip_min=0.0, clip_max=1.0):
     """Perturbs the input `x` based on SPSA attack.
+
+    :param predict: predict function (single argument: input).
+    :param loss_fn: loss function (dual arguments: output, target).
+    :param x: input argument for function `predict`.
+    :param y: target argument for function `loss_fn`.
+    :param eps: the L_inf budget of the attack.
+    :param delta: scaling parameter of SPSA. 
+    :param lr: the learning rate of the `Adam` optimizer.
+    :param nb_iter: number of iterations of the attack.
+    :param nb_sample: number of samples for the SPSA gradient approximation.
+    :param max_batch_size: maximum batch size to be evaluated at once.
+    :param clip_min: upper bound of image values.
+    :param clip_max: lower bound of image values.
+
+    :return: the perturbated input.
     """
 
     if max_batch_size is None:
@@ -78,7 +117,7 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
                 v_ = torch.empty_like(x_)
 
             v_ = v_.bernoulli_().mul_(2.0).sub_(1.0)
-        grad = spsa_grad(predict, loss_fn, x_ + dx, y_, v_, delta)
+            grad = spsa_grad(predict, loss_fn, x_ + dx, y_, v_, delta)
             dx.grad += grad
 
         dx.grad /= nb_batch
@@ -97,6 +136,19 @@ class LinfSPSAAttack(Attack, LabelMixin):
                  loss_fn=None, clip_min=0.0, clip_max=1.0):
         """SPSA Attack (Uesato et al. 2018).
 
+        Based on: https://arxiv.org/abs/1802.05666
+
+        :param predict: predict function (single argument: input).
+        :param eps: the L_inf budget of the attack.
+        :param delta: scaling parameter of SPSA. 
+        :param lr: the learning rate of the `Adam` optimizer.
+        :param nb_iter: number of iterations of the attack.
+        :param nb_sample: number of samples for the SPSA gradient approximation.
+        :param max_batch_size: maximum batch size to be evaluated at once.
+        :param targeted: [description]
+        :param loss_fn: loss function (dual arguments: output, target).
+        :param clip_min: upper bound of image values.
+        :param clip_max: lower bound of image values.
         """
 
         if loss_fn is None:
@@ -118,6 +170,14 @@ class LinfSPSAAttack(Attack, LabelMixin):
 
     def perturb(self, x, y=None):  # pylint: disable=arguments-differ
         """Perturbs the input `x` based on SPSA attack.
+
+        :param x: input tensor.
+        :param y: label tensor (default=`None`). if `self.targeted` is `False`,
+                  `y` is the ground-truth label. if it's `None`, then `y` is
+                  computed as the predicted label of `x`.
+                  if `self.targeted` is `True`, `y` is the target label.
+
+        :return: the perturbated input.
         """
 
         x, y = self._verify_and_process_inputs(x, y)
