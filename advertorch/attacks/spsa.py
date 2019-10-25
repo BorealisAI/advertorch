@@ -81,7 +81,7 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
     :param x: input argument for function `predict`.
     :param y: target argument for function `loss_fn`.
     :param eps: the L_inf budget of the attack.
-    :param delta: scaling parameter of SPSA. 
+    :param delta: scaling parameter of SPSA.
     :param lr: the learning rate of the `Adam` optimizer.
     :param nb_iter: number of iterations of the attack.
     :param nb_sample: number of samples for the SPSA gradient approximation.
@@ -96,10 +96,10 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
         nb_batch = 1
         batch_size = nb_sample
     else:
-        nb_batch = ((x.shape[0] * nb_sample + max_batch_size - 1)
-                    // max_batch_size)
+        nb_batch = ((x.shape[0] * nb_sample + max_batch_size - 1) //
+                    max_batch_size)
         batch_size = (nb_sample + nb_batch - 1) // nb_batch
-    
+
     x = x.unsqueeze(0)
     y = y.unsqueeze(0)
     dx = torch.zeros_like(x)
@@ -140,10 +140,10 @@ class LinfSPSAAttack(Attack, LabelMixin):
 
         :param predict: predict function (single argument: input).
         :param eps: the L_inf budget of the attack.
-        :param delta: scaling parameter of SPSA. 
+        :param delta: scaling parameter of SPSA.
         :param lr: the learning rate of the `Adam` optimizer.
         :param nb_iter: number of iterations of the attack.
-        :param nb_sample: number of samples for the SPSA gradient approximation.
+        :param nb_sample: number of samples for SPSA gradient approximation.
         :param max_batch_size: maximum batch size to be evaluated at once.
         :param targeted: [description]
         :param loss_fn: loss function (dual arguments: output, target).
