@@ -48,7 +48,8 @@ def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
         delta.data = delta.data - x
         delta.data = clamp_by_pnorm(delta.data, ord, eps)
     elif ord == 1:
-        ini = laplace.Laplace(0, 1)
+        ini = laplace.Laplace(
+            loc=delta.new_tensor(0), scale=delta.new_tensor(1))
         delta.data = ini.sample(delta.data.shape)
         delta.data = normalize_by_pnorm(delta.data, p=1)
         ray = uniform.Uniform(0, eps).sample()
