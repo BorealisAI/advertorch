@@ -404,7 +404,7 @@ class FABAttack(Attack, LabelMixin):
                     b = (- df[u1, ind] + (dg2 * x1).sum(dim=(1, 2, 3)))
                     w = dg2.reshape([bs, -1])
 
-                          if self.norm == 'Linf':
+                    if self.norm == 'Linf':
                         d3 = self.projection_linf(
                             torch.cat((x1.reshape([bs, -1]), x0), 0),
                             torch.cat((w, w), 0),
