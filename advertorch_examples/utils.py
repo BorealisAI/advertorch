@@ -19,6 +19,9 @@ import torch
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
+from advertorch.test_utils import LeNet5
+
+
 ROOT_PATH = os.path.expanduser("~/.advertorch")
 DATA_PATH = os.path.join(ROOT_PATH, "data")
 MNIST_PATH = os.path.join(DATA_PATH, "mnist")
@@ -33,31 +36,61 @@ def mkdir(directory):
 
 
 def get_mnist_train_loader(batch_size, shuffle=True):
-    return torch.utils.data.DataLoader(
+    loader = torch.utils.data.DataLoader(
         datasets.MNIST(MNIST_PATH, train=True, download=True,
                        transform=transforms.ToTensor()),
         batch_size=batch_size, shuffle=shuffle)
+    loader.name = "mnist_train"
+    return loader
 
 
 def get_mnist_test_loader(batch_size, shuffle=False):
-    return torch.utils.data.DataLoader(
+    loader = torch.utils.data.DataLoader(
         datasets.MNIST(MNIST_PATH, train=False, download=True,
                        transform=transforms.ToTensor()),
         batch_size=batch_size, shuffle=shuffle)
+    loader.name = "mnist_test"
+    return loader
 
 
 def get_cifar10_train_loader(batch_size, shuffle=True):
-    return torch.utils.data.DataLoader(
+    loader = torch.utils.data.DataLoader(
         datasets.CIFAR10(CIFAR10_PATH, train=True, download=True,
                          transform=transforms.ToTensor()),
         batch_size=batch_size, shuffle=shuffle)
+    loader.name = "cifar10_train"
+    return loader
 
 
 def get_cifar10_test_loader(batch_size, shuffle=False):
-    return torch.utils.data.DataLoader(
+    loader = torch.utils.data.DataLoader(
         datasets.CIFAR10(CIFAR10_PATH, train=False, download=True,
                          transform=transforms.ToTensor()),
         batch_size=batch_size, shuffle=shuffle)
+    loader.name = "cifar10_test"
+    return loader
+
+
+def get_mnist_lenet5_clntrained():
+    filename = "mnist_lenet5_clntrained.pt"
+    model = LeNet5()
+    model.load_state_dict(
+        torch.load(os.path.join(TRAINED_MODEL_PATH, filename)))
+    model.eval()
+    model.name = "mnist_lenet5_clntrained"
+    # TODO: also described where can you find this model, and how is it trained
+    return model
+
+
+def get_mnist_lenet5_advtrained():
+    filename = "mnist_lenet5_advtrained.pt"
+    model = LeNet5()
+    model.load_state_dict(
+        torch.load(os.path.join(TRAINED_MODEL_PATH, filename)))
+    model.eval()
+    model.name = "mnist_lenet5_advtrained"
+    # TODO: also described where can you find this model, and how is it trained
+    return model
 
 
 def bchw2bhwc(x):
