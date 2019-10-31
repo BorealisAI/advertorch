@@ -380,8 +380,8 @@ class FABAttack(Attack, LabelMixin):
                                           self.eps * torch.ones(res2.shape)
                                           .to(self.device)
                                           ).reshape([-1, 1, 1, 1])
-                                ) * t / (t.abs()
-                                         .sum(dim=(1, 2, 3), keepdim=True)) / 2
+                                ) * t / (t.abs().
+                                sum(dim=(1, 2, 3), keepdim=True)) / 2
 
                 x1 = x1.clamp(0.0, 1.0)
 
@@ -390,10 +390,11 @@ class FABAttack(Attack, LabelMixin):
                 with torch.no_grad():
                     df, dg = self.get_diff_logits_grads_batch(x1, la2)
                     if self.norm == 'Linf':
-                        dist1 = df.abs() / (1e-12 + dg.abs().sum(dim=(2, 3, 4)))
-                    elif self.norm == 'L2':
                         dist1 = df.abs() / (1e-12 +
-                                            (dg ** 2).sum(dim=(2, 3, 4)).sqrt())
+                                            dg.abs().sum(dim=(2, 3, 4)))
+                    elif self.norm == 'L2':
+                        dist1 = df.abs() / (1e-12 +(dg ** 2)
+                                            .sum(dim=(2, 3, 4)).sqrt())
                     elif self.norm == 'L1':
                         dist1 = df.abs() / (1e-12 + dg.abs().reshape(
                             [df.shape[0], df.shape[1], -1]).max(dim=2)[0])
@@ -430,7 +431,8 @@ class FABAttack(Attack, LabelMixin):
                     elif self.norm == 'L1':
                         a0 = d3.abs().sum(dim=1, keepdim=True)\
                             .unsqueeze(-1).unsqueeze(-1)
-                    a0 = torch.max(a0, 1e-8 * torch.ones(a0.shape).to(self.device))
+                    a0 = torch.max(a0, 1e-8 * torch.ones(
+                        a0.shape).to(self.device))
                     a1 = a0[:bs]
                     a2 = a0[-bs:]
                     alpha = torch.min(torch.max(a1 / (a1 + a2),
@@ -455,13 +457,14 @@ class FABAttack(Attack, LabelMixin):
                         elif self.norm == 'L1':
                             t = (x1[ind_adv] - im2[ind_adv])\
                                 .abs().sum(dim=(-3, -2, -1))
-                        adv[ind_adv] = x1[ind_adv] * (t < res2[ind_adv]).float()\
-                            .reshape([-1, 1, 1, 1]) + adv[ind_adv]\
-                            * (t >= res2[ind_adv]).float().reshape([-1, 1, 1, 1])
+                        adv[ind_adv] = x1[ind_adv] * (t < res2[ind_adv]).\
+                            float().reshape([-1, 1, 1, 1]) + adv[ind_adv]\
+                            * (t >= res2[ind_adv]).float().reshape(
+                            [-1, 1, 1, 1])
                         res2[ind_adv] = t * (t < res2[ind_adv]).float()\
                             + res2[ind_adv] * (t >= res2[ind_adv]).float()
-                        x1[ind_adv] = im2[ind_adv] + (x1[ind_adv] -
-                                                      im2[ind_adv]) * self.beta
+                        x1[ind_adv] = im2[ind_adv] + (
+                            x1[ind_adv] - im2[ind_adv]) * self.beta
 
                     counter_iter += 1
 
