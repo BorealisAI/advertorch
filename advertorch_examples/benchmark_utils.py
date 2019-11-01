@@ -1,6 +1,7 @@
 import os
 import sys
 
+import numpy as np
 import torch
 import torchvision
 
@@ -27,14 +28,20 @@ def get_benchmark_sys_info():
     return rval
 
 
-def benchmark_robust_accuracy(
-        model, loader, attack_class, attack_kwargs, device="cuda"):
+def _calculate_benchmark_results(
+        model, loader, attack_class, attack_kwargs, norm, device):
     adversary = attack_class(model, **attack_kwargs)
-    label, pred, advpred = multiple_mini_batch_attack(
-        adversary, loader, device=device)
+    label, pred, advpred, dist = multiple_mini_batch_attack(
+        adversary, loader, device=device, norm=norm)
     accuracy = 100. * (label == pred).sum().item() / len(label)
-    robust_accuracy = 100. * (label == advpred).sum().item() / len(label)
+    attack_success_rate = 100. * (label != advpred).sum().item() / len(label)
+    dist = None if dist is None else dist[label != advpred]
+    return accuracy, attack_success_rate, dist
 
+
+def _generate_basic_benchmark_str(
+        model, loader, attack_class, attack_kwargs, accuracy,
+        attack_success_rate):
     rval = ""
     rval += "# attack type: {}\n".format(attack_class.__name__)
 
@@ -48,6 +55,36 @@ def benchmark_robust_accuracy(
     rval += "# data: {}\n".format(loader.name)
     rval += "# model: {}\n".format(model.name)
     rval += "# accuracy: {}%\n".format(accuracy)
-    rval += "# robust accuracy: {}%\n".format(robust_accuracy)
+    rval += "# attack success rate: {}%\n".format(attack_success_rate)
+    return rval
+
+
+
+def benchmark_attack_success_rate(
+        model, loader, attack_class, attack_kwargs, device="cuda"):
+    accuracy, attack_success_rate, _ = _calculate_benchmark_results(
+        model, loader, attack_class, attack_kwargs, None, device)
+    rval = _generate_basic_benchmark_str(
+        model, loader, attack_class, attack_kwargs, accuracy,
+        attack_success_rate)
+    return rval
+
+
+def benchmark_margin(
+        model, loader, attack_class, attack_kwargs, norm, device="cuda"):
+
+    accuracy, attack_success_rate, dist = _calculate_benchmark_results(
+        model, loader, attack_class, attack_kwargs, norm, device)
+    rval = _generate_basic_benchmark_str(
+        model, loader, attack_class, attack_kwargs, accuracy,
+        attack_success_rate)
+
+    rval += "# Among successful attacks (L{} norm):\n".format(norm)
+    rval += "#    minimum distance: {:.4}\n".format(dist.min().item())
+    rval += "#    median distance: {:.4}\n".format(dist.median().item())
+    rval += "#    maximum distance: {:.4}\n".format(dist.max().item())
+    rval += "#    average distance: {:.4}\n".format(dist.mean().item())
+    rval += "#    distance standard deviation: {:.4}\n".format(
+        dist.std().item())
 
     return rval

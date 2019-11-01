@@ -20,31 +20,32 @@
 
 # attack type: LinfPGDAttack
 # attack kwargs: loss_fn=CrossEntropyLoss()
-#                eps=0.15
+#                eps=0.3
 #                nb_iter=40
 #                eps_iter=0.01
-#                rand_init=True
+#                rand_init=False
 #                clip_min=0.0
 #                clip_max=1.0
 #                targeted=False
 # data: mnist_test
 # model: mnist_lenet5_clntrained
 # accuracy: 98.89%
-# robust accuracy: 8.9%
+# attack success rate: 100.0%
 
 # attack type: LinfPGDAttack
 # attack kwargs: loss_fn=CrossEntropyLoss()
-#                eps=0.15
+#                eps=0.3
 #                nb_iter=40
 #                eps_iter=0.01
-#                rand_init=True
+#                rand_init=False
 #                clip_min=0.0
 #                clip_max=1.0
 #                targeted=False
 # data: mnist_test
 # model: mnist_lenet5_advtrained
 # accuracy: 98.64%
-# robust accuracy: 96.93%
+# attack success rate: 6.8%
+
 
 
 import torch.nn as nn
@@ -66,15 +67,15 @@ from advertorch.attacks import LinfPGDAttack
 # TODO: from advertorch.attacks import LinfMomentumIterativeAttack
 # TODO: from advertorch.attacks import FastFeatureAttack
 
-from advertorch_examples.benchmark_utils import benchmark_robust_accuracy
+from advertorch_examples.benchmark_utils import benchmark_attack_success_rate
 
 batch_size = 100
 device = "cuda"
 
 lst_attack = [
     (LinfPGDAttack, dict(
-        loss_fn=nn.CrossEntropyLoss(reduction="sum"), eps=0.15,
-        nb_iter=40, eps_iter=0.01, rand_init=True,
+        loss_fn=nn.CrossEntropyLoss(reduction="sum"), eps=0.3,
+        nb_iter=40, eps_iter=0.01, rand_init=False,
         clip_min=0.0, clip_max=1.0, targeted=False)),
 ]  # each element in the list is the tuple (attack_class, attack_kwargs)
 
@@ -93,7 +94,7 @@ info = get_benchmark_sys_info()
 lst_benchmark = []
 for model, loader in lst_setting:
     for attack_class, attack_kwargs in lst_attack:
-        lst_benchmark.append(benchmark_robust_accuracy(
+        lst_benchmark.append(benchmark_attack_success_rate(
             model, loader, attack_class, attack_kwargs))
 
 print(info)
