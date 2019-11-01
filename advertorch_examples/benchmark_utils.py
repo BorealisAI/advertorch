@@ -34,7 +34,7 @@ def _calculate_benchmark_results(
         adversary, loader, device=device, norm=norm)
     accuracy = 100. * (label == pred).sum().item() / len(label)
     attack_success_rate = 100. * (label != advpred).sum().item() / len(label)
-    dist = None if dist is None else dist[label != advpred & label == pred]
+    dist = None if dist is None else dist[(label != advpred) & (label == pred)]
     return accuracy, attack_success_rate, dist
 
 
@@ -78,7 +78,8 @@ def benchmark_margin(
         model, loader, attack_class, attack_kwargs, accuracy,
         attack_success_rate)
 
-    rval += "# Among successful attacks (L{} norm):\n".format(norm)
+    rval += "# Among successful attacks (L{} norm) ".format(norm) + \
+        "on correctly classified examples:\n"
     rval += "#    minimum distance: {:.4}\n".format(dist.min().item())
     rval += "#    median distance: {:.4}\n".format(dist.median().item())
     rval += "#    maximum distance: {:.4}\n".format(dist.max().item())

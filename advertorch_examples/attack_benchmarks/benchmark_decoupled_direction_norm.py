@@ -31,12 +31,12 @@
 # model: MNIST LeNet5 standard training
 # accuracy: 98.89%
 # attack success rate: 100.0%
-# Among successful attacks (L2 norm):
-#    minimum distance: 0.0
-#    median distance: 1.382
+# Among successful attacks (L2 norm) on correctly classified examples:
+#    minimum distance: 0.006792
+#    median distance: 1.388
 #    maximum distance: 3.3
-#    average distance: 1.365
-#    distance standard deviation: 0.4907
+#    average distance: 1.38
+#    distance standard deviation: 0.4716
 
 # attack type: DDNL2Attack
 # attack kwargs: nb_iter=1000
@@ -51,12 +51,12 @@
 # model: MNIST LeNet 5 PGD training according to Madry et al. 2018
 # accuracy: 98.64%
 # attack success rate: 100.0%
-# Among successful attacks (L2 norm):
-#    minimum distance: 0.0
-#    median distance: 1.861
+# Among successful attacks (L2 norm) on correctly classified examples:
+#    minimum distance: 0.005546
+#    median distance: 1.872
 #    maximum distance: 20.45
-#    average distance: 1.891
-#    distance standard deviation: 0.7611
+#    average distance: 1.917
+#    distance standard deviation: 0.733
 
 
 from advertorch_examples.utils import get_mnist_test_loader
