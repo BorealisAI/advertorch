@@ -77,7 +77,7 @@ def get_mnist_lenet5_clntrained():
     model.load_state_dict(
         torch.load(os.path.join(TRAINED_MODEL_PATH, filename)))
     model.eval()
-    model.name = "mnist_lenet5_clntrained"
+    model.name = "MNIST LeNet5 standard training"
     # TODO: also described where can you find this model, and how is it trained
     return model
 
@@ -88,7 +88,7 @@ def get_mnist_lenet5_advtrained():
     model.load_state_dict(
         torch.load(os.path.join(TRAINED_MODEL_PATH, filename)))
     model.eval()
-    model.name = "mnist_lenet5_advtrained"
+    model.name = "MNIST LeNet 5 PGD training according to Madry et al. 2018"
     # TODO: also described where can you find this model, and how is it trained
     return model
 

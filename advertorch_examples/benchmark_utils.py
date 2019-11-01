@@ -1,7 +1,6 @@
 import os
 import sys
 
-import numpy as np
 import torch
 import torchvision
 
@@ -35,7 +34,7 @@ def _calculate_benchmark_results(
         adversary, loader, device=device, norm=norm)
     accuracy = 100. * (label == pred).sum().item() / len(label)
     attack_success_rate = 100. * (label != advpred).sum().item() / len(label)
-    dist = None if dist is None else dist[label != advpred]
+    dist = None if dist is None else dist[label != advpred & label == pred]
     return accuracy, attack_success_rate, dist
 
 

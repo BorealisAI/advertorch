@@ -5,6 +5,59 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
+#
+#
+# Automatically generated benchmark report (screen print of running this file)
+#
+# sysname: Linux
+# release: 4.4.0-140-generic
+# version: #166-Ubuntu SMP Wed Nov 14 20:09:47 UTC 2018
+# machine: x86_64
+# python: 3.7.3
+# torch: 1.1.0
+# torchvision: 0.3.0
+# advertorch: 0.1.5
+
+# attack type: DDNL2Attack
+# attack kwargs: nb_iter=1000
+#                gamma=0.05
+#                init_norm=1.0
+#                quantize=True
+#                levels=256
+#                clip_min=0.0
+#                clip_max=1.0
+#                targeted=False
+# data: mnist_test
+# model: MNIST LeNet5 standard training
+# accuracy: 98.89%
+# attack success rate: 100.0%
+# Among successful attacks (L2 norm):
+#    minimum distance: 0.0
+#    median distance: 1.382
+#    maximum distance: 3.3
+#    average distance: 1.365
+#    distance standard deviation: 0.4907
+
+# attack type: DDNL2Attack
+# attack kwargs: nb_iter=1000
+#                gamma=0.05
+#                init_norm=1.0
+#                quantize=True
+#                levels=256
+#                clip_min=0.0
+#                clip_max=1.0
+#                targeted=False
+# data: mnist_test
+# model: MNIST LeNet 5 PGD training according to Madry et al. 2018
+# accuracy: 98.64%
+# attack success rate: 100.0%
+# Among successful attacks (L2 norm):
+#    minimum distance: 0.0
+#    median distance: 1.861
+#    maximum distance: 20.45
+#    average distance: 1.891
+#    distance standard deviation: 0.7611
+
 
 from advertorch_examples.utils import get_mnist_test_loader
 from advertorch_examples.utils import get_mnist_lenet5_clntrained

@@ -28,7 +28,7 @@
 #                clip_max=1.0
 #                targeted=False
 # data: mnist_test
-# model: mnist_lenet5_clntrained
+# model: MNIST LeNet5 standard training
 # accuracy: 98.89%
 # attack success rate: 100.0%
 
@@ -42,10 +42,9 @@
 #                clip_max=1.0
 #                targeted=False
 # data: mnist_test
-# model: mnist_lenet5_advtrained
+# model: MNIST LeNet 5 PGD training according to Madry et al. 2018
 # accuracy: 98.64%
 # attack success rate: 6.8%
-
 
 
 import torch.nn as nn
