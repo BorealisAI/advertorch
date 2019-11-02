@@ -13,7 +13,7 @@ We ask that you follow the `PEP8` coding style in your pull requests, [`flake8`]
 - *(mandatory)* The implementation file should be added to the folder `advertorch/attacks`, and the class should be imported in `advertorch/attacks/__init__.py`.
 - *(mandatory)* The attack should be included in different unit tests, this can be done by adding the attack class to different lists in `advertorch/test_utils.py`
     + add to `general_input_attacks` if it can perturb input tensor of any shape (not limited to images),
-    + add to `image_only_attacks` if it specifically work on images,
+    + add to `image_only_attacks` if it only works on images,
     + add to `label_attacks` if the attack manipulates labels,
     + add to `feature_attacks` if the attack manipulates features,
     + add to `batch_consistent_attacks` if the attack's behavior should be the same when it is applied to a single example or a batch,
