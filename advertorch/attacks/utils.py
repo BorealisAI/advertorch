@@ -95,7 +95,7 @@ class AttackConfig(object):
 
 
 def multiple_mini_batch_attack(
-        adversary, loader, device="cuda", norm=None):
+        adversary, loader, device="cuda", norm=None, num_batch=None):
     lst_label = []
     lst_pred = []
     lst_advpred = []
@@ -113,6 +113,8 @@ def multiple_mini_batch_attack(
         assert norm is None
 
 
+    idx_batch = 0
+
     for data, label in loader:
         data, label = data.to(device), label.to(device)
         adv = adversary.perturb(data, label)
@@ -123,6 +125,10 @@ def multiple_mini_batch_attack(
         lst_advpred.append(advpred)
         if norm is not None:
             lst_dist.append(dist_func(data, adv))
+
+        idx_batch += 1
+        if idx_batch == num_batch:
+            break
 
     return torch.cat(lst_label), torch.cat(lst_pred), torch.cat(lst_advpred), \
         torch.cat(lst_dist) if norm is not None else None

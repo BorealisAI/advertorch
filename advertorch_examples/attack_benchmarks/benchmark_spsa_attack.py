@@ -9,7 +9,8 @@ from advertorch.attacks import LinfSPSAAttack
 
 from advertorch_examples.benchmark_utils import benchmark_attack_success_rate
 
-batch_size = 100
+batch_size = 10
+num_batch = 10
 device = "cuda"
 
 lst_attack = [
@@ -36,7 +37,8 @@ lst_benchmark = []
 for model, loader in lst_setting:
     for attack_class, attack_kwargs in lst_attack:
         lst_benchmark.append(benchmark_attack_success_rate(
-            model, loader, attack_class, attack_kwargs))
+            model, loader, attack_class, attack_kwargs,
+            device=device, num_batch=num_batch))
 
 print(info)
 for item in lst_benchmark:
