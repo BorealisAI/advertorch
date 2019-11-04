@@ -20,7 +20,7 @@ adversary = LinfPGDAttack(
     nb_iter=20, eps_iter=2. / 255, rand_init=False, clip_min=0.0, clip_max=1.0,
     targeted=False)
 
-label, pred, advpred = multiple_mini_batch_attack(
+label, pred, advpred, _ = multiple_mini_batch_attack(
     adversary, loader, device="cuda")
 
 print("Accuracy: {:.2f}%, Robust Accuracy: {:.2f}%".format(
