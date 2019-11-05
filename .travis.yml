@@ -5,7 +5,7 @@ before_install:
     - travis_wait travis_retry pip install flake8
     - travis_wait travis_retry pip install torch
     - travis_wait travis_retry pip install torchvision
-    - travis_wait travis_retry pip install tensorflow
+    - travis_wait travis_retry pip install tensorflow==1.14.0
     - travis_wait travis_retry pip install scipy
     - travis_wait travis_retry pip install foolbox==1.3.2
     - travis_wait travis_retry pip install Keras==2.2.2

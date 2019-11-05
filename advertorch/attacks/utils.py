@@ -49,7 +49,8 @@ def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
         delta.data = delta.data - x
         delta.data = clamp_by_pnorm(delta.data, ord, eps)
     elif ord == 1:
-        ini = laplace.Laplace(0, 1)
+        ini = laplace.Laplace(
+            loc=delta.new_tensor(0), scale=delta.new_tensor(1))
         delta.data = ini.sample(delta.data.shape)
         delta.data = normalize_by_pnorm(delta.data, p=1)
         ray = uniform.Uniform(0, eps).sample()
@@ -93,10 +94,24 @@ class AttackConfig(object):
         return adversary
 
 
-def multiple_mini_batch_attack(adversary, loader, device="cuda"):
+def multiple_mini_batch_attack(
+        adversary, loader, device="cuda", norm=None):
     lst_label = []
     lst_pred = []
     lst_advpred = []
+    lst_dist = []
+
+    if norm == "inf":
+        def dist_func(x, y):
+            return (x - y).view(x.size(0), -1).max(dim=1)[0]
+    elif norm == 1 or norm == 2:
+        from advertorch.utils import _get_norm_batch
+
+        def dist_func(x, y):
+            return _get_norm_batch(x - y, norm)
+    else:
+        assert norm is None
+
 
     for data, label in loader:
         data, label = data.to(device), label.to(device)
@@ -106,8 +121,11 @@ def multiple_mini_batch_attack(adversary, loader, device="cuda"):
         lst_label.append(label)
         lst_pred.append(pred)
         lst_advpred.append(advpred)
+        if norm is not None:
+            lst_dist.append(dist_func(data, adv))
 
-    return torch.cat(lst_label), torch.cat(lst_pred), torch.cat(lst_advpred)
+    return torch.cat(lst_label), torch.cat(lst_pred), torch.cat(lst_advpred), \
+        torch.cat(lst_dist) if norm is not None else None
 
 
 class MarginalLoss(_Loss):
