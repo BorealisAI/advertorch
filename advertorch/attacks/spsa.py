@@ -103,8 +103,9 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
     x = x.unsqueeze(0)
     y = y.unsqueeze(0)
     dx = torch.zeros_like(x)
-    x_ = x.expand(batch_size, *x.shape[1:])
-    y_ = y.expand(batch_size, *y.shape[1:])
+    dx.grad = torch.zeros_like(dx)
+    x_ = x.expand(batch_size, *x.shape[1:]).contiguous()
+    y_ = y.expand(batch_size, *y.shape[1:]).contiguous()
     v_ = torch.empty_like(x_)
     optimizer = torch.optim.Adam([dx], lr=lr)
 
