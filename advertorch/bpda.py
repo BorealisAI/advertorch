@@ -80,11 +80,20 @@ class BPDAWrapper(FunctionWrapper):
 
             @staticmethod
             def forward(ctx, *inputs, **kwargs):
+                ctx.save_for_backward(*inputs)
                 return forward_fn(*inputs, **kwargs)
 
             @staticmethod
             def backward(ctx, *grad_outputs):
-                return grad_outputs
+                inputs = ctx.saved_tensors
+                if len(grad_outputs) == len(inputs):
+                    return grad_outputs
+                elif len(grad_outputs) == 1:
+                    return tuple([grad_outputs[0] for _ in inputs])
+
+                raise ValueError("Expected %d gradients but got %d" %
+                                 (len(inputs), len(grad_outputs)))
+
 
         return Func
 
