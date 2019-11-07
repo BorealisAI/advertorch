@@ -119,9 +119,9 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
 
             v_ = v_.bernoulli_().mul_(2.0).sub_(1.0)
             grad = spsa_grad(predict, loss_fn, x_ + dx, y_, v_, delta)
-            dx.grad += grad
+            dx.grad += grad * v_.shape[0]
 
-        dx.grad /= nb_batch
+        dx.grad /= nb_sample
         optimizer.step()
         dx = linf_clamp_(dx, x, eps, clip_min, clip_max)
 
