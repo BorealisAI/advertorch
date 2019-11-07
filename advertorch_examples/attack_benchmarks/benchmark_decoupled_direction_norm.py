@@ -93,7 +93,7 @@ lst_benchmark = []
 for model, loader in lst_setting:
     for attack_class, attack_kwargs in lst_attack:
         lst_benchmark.append(benchmark_margin(
-            model, loader, attack_class, attack_kwargs, 2))
+            model, loader, attack_class, attack_kwargs, norm=2, device="cuda"))
 
 print(info)
 for item in lst_benchmark:

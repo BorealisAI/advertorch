@@ -32,6 +32,7 @@ from advertorch.attacks import LBFGSAttack
 from advertorch.attacks import JacobianSaliencyMapAttack
 from advertorch.attacks import SpatialTransformAttack
 from advertorch.attacks import LinfSPSAAttack
+
 from advertorch.utils import CarliniWagnerLoss
 from advertorch.utils import torch_allclose
 
@@ -81,7 +82,7 @@ attack_kwargs = {
     DDNL2Attack: {"nb_iter": 5},
     SparseL1DescentAttack: {"rand_init": False, "nb_iter": 5},
     L1PGDAttack: {"rand_init": False, "nb_iter": 5},
-    LinfSPSAAttack: {"eps": 0.01},
+    LinfSPSAAttack: {"eps": 0.3},
 }
 
 
