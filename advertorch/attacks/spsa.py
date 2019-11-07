@@ -104,8 +104,8 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
     y = y.unsqueeze(0)
     dx = torch.zeros_like(x)
     dx.grad = torch.zeros_like(dx)
-    x_ = x.repeat_interleave(batch_size, 0)
-    y_ = y.repeat_interleave(batch_size, 0)
+    x_ = x.expand(batch_size, *x.shape[1:]).contiguous()
+    y_ = y.expand(batch_size, *y.shape[1:]).contiguous()
     v_ = torch.empty_like(x_)
     optimizer = torch.optim.Adam([dx], lr=lr)
 
@@ -113,8 +113,8 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
         optimizer.zero_grad()
         for ii in range(nb_batch):
             if ii == nb_batch - 1 and nb_batch * batch_size > nb_sample:
-                x_ = x.repeat_interleave(nb_batch * batch_size - nb_sample, 0)
-                y_ = y.repeat_interleave(nb_batch * batch_size - nb_sample, 0)
+                x_ = x.expand(nb_batch * batch_size - nb_sample, *x.shape[1:])
+                y_ = y.expand(nb_batch * batch_size - nb_sample, *y.shape[1:])
                 v_ = torch.empty_like(x_)
 
             v_ = v_.bernoulli_().mul_(2.0).sub_(1.0)
