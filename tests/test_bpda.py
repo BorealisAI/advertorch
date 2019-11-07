@@ -10,7 +10,6 @@ import itertools
 import pytest
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from advertorch.bpda import BPDAWrapper
 from advertorch.utils import torch_allclose
@@ -126,7 +125,7 @@ def test_bpda_nograd_on_multi_input(device, func):
     with torch.enable_grad():
         loss_ = net(z_).sum()
         loss = net(z).sum()
-    grad_z, = torch.autograd.grad(loss_, [z_,])
+    grad_z, = torch.autograd.grad(loss_, [z_])
     grad_x, grad_y = torch.autograd.grad(loss, [x, y])
 
     assert torch_allclose(grad_x, grad_z)
