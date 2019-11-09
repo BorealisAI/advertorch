@@ -92,7 +92,7 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
     :return: the perturbated input.
     """
 
-    if max_batch_size is None:
+    if max_batch_size is None or max_batch_size <= 0:
         nb_batch = 1
         batch_size = nb_sample
     else:
@@ -113,9 +113,10 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
         optimizer.zero_grad()
         for ii in range(nb_batch):
             if ii == nb_batch - 1 and nb_batch * batch_size > nb_sample:
-                x_ = x.expand(nb_batch * batch_size - nb_sample, *x.shape[1:])
-                y_ = y.expand(nb_batch * batch_size - nb_sample, *y.shape[1:])
-                v_ = torch.empty_like(x_)
+                x_ = x.expand(nb_batch * batch_size - nb_sample,
+                              *x.shape[1:]).contiguous()
+                y_ = y.expand(nb_batch * batch_size - nb_sample,
+                              *y.shape[1:]).contiguous()
 
             v_ = v_.bernoulli_().mul_(2.0).sub_(1.0)
             grad = spsa_grad(predict, loss_fn, x_ + dx, y_, v_, delta)
