@@ -147,7 +147,7 @@ class MarginalLoss(_Loss):
         )
 
         loss = max_nontarget_logits - target_logits
-
+        loss = loss.sum(dim=[i for i in range(1, loss.ndim)])
         if self.reduction == "none":
             pass
         elif self.reduction == "sum":
