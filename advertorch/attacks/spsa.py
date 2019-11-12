@@ -119,21 +119,23 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
     y = y.unsqueeze(0)
     dx = torch.zeros_like(x)
     dx.grad = torch.zeros_like(dx)
-    x_ = x.expand(batch_size, *x.shape[1:]).contiguous()
-    y_ = y.expand(batch_size, *y.shape[1:]).contiguous()
-    v_ = torch.empty_like(x_)
-
     optimizer = torch.optim.Adam([dx], lr=lr)
-
+    xb = x.expand(batch_size, *x.shape[1:]).contiguous()
+    yb = y.expand(batch_size, *y.shape[1:]).contiguous()
+    vb = torch.empty_like(xb)
     for _ in range(nb_iter):
         optimizer.zero_grad()
         for ii in range(nb_batch):
+            vb = vb.bernoulli_().mul_(2.0).sub_(1.0)
             if ii == nb_batch - 1 and nb_batch * batch_size > nb_sample:
-                x_ = x_[:nb_batch * batch_size - nb_sample]
-                y_ = y_[:nb_batch * batch_size - nb_sample]
-                v_ = v_[:nb_batch * batch_size - nb_sample]
+                x_ = xb[:nb_batch * batch_size - nb_sample]
+                y_ = yb[:nb_batch * batch_size - nb_sample]
+                v_ = vb[:nb_batch * batch_size - nb_sample]
+            else:
+                x_ = xb
+                y_ = yb
+                v_ = vb
 
-            v_ = v_.bernoulli_().mul_(2.0).sub_(1.0)
             grad = spsa_grad(predict, loss_fn, x_ + dx, y_,
                              v_, delta, reduction="sum")
             dx.grad += grad
