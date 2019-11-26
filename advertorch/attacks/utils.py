@@ -139,7 +139,7 @@ class MarginalLoss(_Loss):
     def forward(self, logits, targets):  # pylint: disable=arguments-differ
         assert logits.shape[-1] >= 2
         top_logits, top_classes = torch.topk(logits, 2, dim=-1)
-        target_logits = torch.index_select(logits, -1, targets)
+        target_logits = logits[torch.arange(logits.shape[0]), targets]
         max_nontarget_logits = torch.where(
             top_classes[..., 0] == targets,
             top_logits[..., 1],
