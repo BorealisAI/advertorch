@@ -496,7 +496,7 @@ class LinfFABAttack(FABAttack):
             predict=predict, norm=norm, n_restarts=n_restarts,
             n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
             loss_fn=loss_fn)
-            
+
 class L2FABAttack(FABAttack):
     """
     L2 - Fast Adaptive Boundary Attack
@@ -527,7 +527,7 @@ class L2FABAttack(FABAttack):
             predict=predict, norm=norm, n_restarts=n_restarts,
             n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
             loss_fn=loss_fn)
-            
+
 class L1FABAttack(FABAttack):
     """
     L1 - Fast Adaptive Boundary Attack
