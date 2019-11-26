@@ -19,7 +19,7 @@ from advertorch.utils import replicate_input
 from .base import Attack
 from .base import LabelMixin
 
-EPS_DICT = {'Linf': .3, 'L2': 1., 'L1': 5.0}
+DEFAULT_EPS_DICT_BY_NORM = {'Linf': .3, 'L2': 1., 'L1': 5.0}
 
 
 class FABAttack(Attack, LabelMixin):
@@ -44,12 +44,11 @@ class FABAttack(Attack, LabelMixin):
             norm='Linf',
             n_restarts=1,
             n_iter=100,
-            eps=-1,
+            eps=None,
             alpha_max=0.1,
             eta=1.05,
             beta=0.9,
-            device='none',
-            loss_fn='none'):
+            loss_fn=None):
         """ FAB-attack implementation in pytorch """
 
         super(FABAttack, self).__init__(
@@ -58,12 +57,11 @@ class FABAttack(Attack, LabelMixin):
         self.norm = norm
         self.n_restarts = n_restarts
         self.n_iter = n_iter
-        self.eps = eps if eps > 0 else EPS_DICT[norm]
+        self.eps = eps if eps is not None else DEFAULT_EPS_DICT_BY_NORM[norm]
         self.alpha_max = alpha_max
         self.eta = eta
         self.beta = beta
         self.targeted = False
-        self.device = device
 
     def check_shape(self, x):
         return x if len(x.shape) > 0 else x.unsqueeze(0)
@@ -72,37 +70,23 @@ class FABAttack(Attack, LabelMixin):
         im = imgs.clone().requires_grad_()
         with torch.enable_grad():
             y = self.predict(im)
-        g2 = self.compute_jacobian(im, y).detach()
+
+        g2 = torch.zeros([y.shape[-1], *imgs.size()]).to(self.device)
+        grad_mask = torch.zeros_like(y)
+        for counter in range(y.shape[-1]):
+            zero_gradients(im)
+            grad_mask[:, counter] = 1.0
+            y.backward(grad_mask, retain_graph=True)
+            grad_mask[:, counter] = 0.0
+            g2[counter] = im.grad.data
+
+        g2 = torch.transpose(g2, 0, 1).detach()
         y2 = self.predict(imgs).detach()
         df = y2 - y2[torch.arange(imgs.shape[0]), la].unsqueeze(1)
         dg = g2 - g2[torch.arange(imgs.shape[0]), la].unsqueeze(1)
         df[torch.arange(imgs.shape[0]), la] = 1e10
 
         return df, dg
-
-    def compute_jacobian(self, inputs, output):
-        """
-        from github.com/ast0414/adversarial-example/blob/master/craft.py
-        """
-
-        assert inputs.requires_grad
-        num_classes = output.size()[1]
-
-        jacobian = torch.zeros(num_classes, *inputs.size()).to(self.device)
-        grad_output = torch.zeros(*output.size()).to(self.device)
-        if inputs.is_cuda:
-            grad_output = grad_output.to(self.device)
-            jacobian = jacobian.to(self.device)
-
-        for i in range(num_classes):
-            zero_gradients(inputs)
-            grad_output.zero_()
-            grad_output[:, i] = 1
-            output.backward(grad_output, retain_graph=True)
-
-            jacobian[i] = inputs.grad.data
-
-        return torch.transpose(jacobian, dim0=0, dim1=1)
 
     def projection_linf(self, points_to_project, w_hyperplane, b_hyperplane):
         t = points_to_project.clone()
@@ -320,8 +304,8 @@ class FABAttack(Attack, LabelMixin):
         :param y:    clean labels, if None we use the predicted labels
         """
 
-        if self.device == 'none':
-            self.device = x.device
+        self.device = x.device
+        self.orig_dim = list(x.shape[1:])
 
         x = x.detach().clone().float().to(self.device)
         assert next(self.predict.parameters()).device == x.device
@@ -481,3 +465,96 @@ class FABAttack(Attack, LabelMixin):
         adv_c[pred[ind_succ]] = adv[ind_succ].clone()
 
         return adv_c
+
+class LinfFABAttack(FABAttack):
+    """
+    Linf - Fast Adaptive Boundary Attack
+    https://arxiv.org/abs/1907.02044
+
+    :param predict:       forward pass function
+    :param n_restarts:    number of random restarts
+    :param n_iter:        number of iterations
+    :param eps:           epsilon for the random restarts
+    :param alpha_max:     alpha_max
+    :param eta:           overshooting
+    :param beta:          backward step
+    :param device:        device to use ('cuda' or 'cpu')
+    """
+
+    def __init__(
+            self,
+            predict,
+            n_restarts=1,
+            n_iter=100,
+            eps=None,
+            alpha_max=0.1,
+            eta=1.05,
+            beta=0.9,
+            loss_fn=None):
+        norm = 'Linf'
+        super(LinfFABAttack, self).__init__(
+            predict=predict, norm=norm, n_restarts=n_restarts,
+            n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
+            loss_fn=loss_fn)
+            
+class L2FABAttack(FABAttack):
+    """
+    L2 - Fast Adaptive Boundary Attack
+    https://arxiv.org/abs/1907.02044
+
+    :param predict:       forward pass function
+    :param n_restarts:    number of random restarts
+    :param n_iter:        number of iterations
+    :param eps:           epsilon for the random restarts
+    :param alpha_max:     alpha_max
+    :param eta:           overshooting
+    :param beta:          backward step
+    :param device:        device to use ('cuda' or 'cpu')
+    """
+
+    def __init__(
+            self,
+            predict,
+            n_restarts=1,
+            n_iter=100,
+            eps=None,
+            alpha_max=0.1,
+            eta=1.05,
+            beta=0.9,
+            loss_fn=None):
+        norm = 'L2'
+        super(LinfFABAttack, self).__init__(
+            predict=predict, norm=norm, n_restarts=n_restarts,
+            n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
+            loss_fn=loss_fn)
+            
+class L1FABAttack(FABAttack):
+    """
+    L1 - Fast Adaptive Boundary Attack
+    https://arxiv.org/abs/1907.02044
+
+    :param predict:       forward pass function
+    :param n_restarts:    number of random restarts
+    :param n_iter:        number of iterations
+    :param eps:           epsilon for the random restarts
+    :param alpha_max:     alpha_max
+    :param eta:           overshooting
+    :param beta:          backward step
+    :param device:        device to use ('cuda' or 'cpu')
+    """
+
+    def __init__(
+            self,
+            predict,
+            n_restarts=1,
+            n_iter=100,
+            eps=None,
+            alpha_max=0.1,
+            eta=1.05,
+            beta=0.9,
+            loss_fn=None):
+        norm = 'L1'
+        super(LinfFABAttack, self).__init__(
+            predict=predict, norm=norm, n_restarts=n_restarts,
+            n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
+            loss_fn=loss_fn)

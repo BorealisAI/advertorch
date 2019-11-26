@@ -44,3 +44,6 @@ from .jsma import JacobianSaliencyMapAttack
 from .jsma import JSMA
 
 from .fab_attack import FABAttack
+from .fab_attack import LinfFABAttack
+from .fab_attack import L2FABAttack
+from .fab_attack import L1FABAttack
