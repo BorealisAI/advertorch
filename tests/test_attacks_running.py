@@ -82,7 +82,7 @@ attack_kwargs = {
     DDNL2Attack: {"nb_iter": 5},
     SparseL1DescentAttack: {"rand_init": False, "nb_iter": 5},
     L1PGDAttack: {"rand_init": False, "nb_iter": 5},
-    LinfSPSAAttack: {"eps": 0.3},
+    LinfSPSAAttack: {"eps": 0.3, "max_batch_size": 63},
 }
 
 

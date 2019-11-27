@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 
 import warnings
 
+from boltons.iterutils import chunked_iter
 import torch
 
 from .base import Attack
@@ -107,39 +108,25 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
     :return: the perturbated input.
     """
 
-    if max_batch_size is None or max_batch_size <= 0:
-        nb_batch = 1
-        batch_size = nb_sample
-    else:
-        nb_batch = ((x.shape[0] * nb_sample + max_batch_size - 1) //
-                    max_batch_size)
-        batch_size = (nb_sample + nb_batch - 1) // nb_batch
-
     x = x.unsqueeze(0)
     y = y.unsqueeze(0)
-    dx = torch.zeros_like(x)
+    dx = torch.zeros_like(x) # is it necessary to define x after the expansin of x?
     dx.grad = torch.zeros_like(dx)
     optimizer = torch.optim.Adam([dx], lr=lr)
-    xb = x.expand(batch_size, *x.shape[1:]).contiguous()
-    yb = y.expand(batch_size, *y.shape[1:]).contiguous()
-    vb = torch.empty_like(xb)
+    # Todo: put the following logic in spsa_grad.
+    xb = x.expand(max_batch_size, *x.shape[1:]).contiguous()
+    yb = y.expand(max_batch_size, *y.shape[1:]).contiguous()
+    vb = torch.empty_like(xb[:, 0:1, ...])
     for _ in range(nb_iter):
         optimizer.zero_grad()
-        for ii in range(nb_batch):
+        for nb_sample_per_batch in chunked_iter(range(nb_sample), max_batch_size): # the use of chunked_iter, and following len() feels a bit clumsy. Any better alternative?
             vb = vb.bernoulli_().mul_(2.0).sub_(1.0)
-            if ii == nb_batch - 1 and nb_batch * batch_size > nb_sample:
-                x_ = xb[:nb_batch * batch_size - nb_sample]
-                y_ = yb[:nb_batch * batch_size - nb_sample]
-                v_ = vb[:nb_batch * batch_size - nb_sample]
-            else:
-                x_ = xb
-                y_ = yb
-                v_ = vb
-
+            x_ = xb[:len(nb_sample_per_batch)]
+            y_ = yb[:len(nb_sample_per_batch)]
+            v_ = vb[:len(nb_sample_per_batch)].expand_as(x_).contiguous()
             grad = spsa_grad(predict, loss_fn, x_ + dx, y_,
-                             v_, delta, reduction="sum")
+                    v_, delta, reduction="sum")
             dx.grad += grad
-
         dx.grad /= nb_sample
         optimizer.step()
         dx = linf_clamp_(dx, x, eps, clip_min, clip_max)
