@@ -39,6 +39,10 @@ def linf_clamp_(dx, x, eps, clip_min, clip_max):
 
     dx_clamped = torch.clamp(dx, -eps, eps)
     x_adv = torch.clamp(x + dx_clamped, clip_min, clip_max)
+    # `dx` is changed *inplace* so the optimizer will keep
+    # tracking it. the simplest mechanism for inplace was
+    # adding the difference between the new value `x_adv - x`
+    # and the old value `dx`.
     dx += x_adv - x - dx
     return dx
 
