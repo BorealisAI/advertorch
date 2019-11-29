@@ -9,6 +9,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import warnings
+
+from boltons.iterutils import chunked_iter
 import torch
 
 from .base import Attack
@@ -41,7 +44,7 @@ def linf_clamp_(dx, x, eps, clip_min, clip_max):
 
 
 @torch.no_grad()
-def spsa_grad(predict, loss_fn, x, y, v, delta):
+def spsa_grad(predict, loss_fn, x, y, v, delta, reduction="mean"):
     """Uses SPSA method to apprixmate gradient w.r.t `x`.
 
     Use the SPSA method to approximate the gradient of `loss_fn(predict(x), y)`
@@ -53,10 +56,13 @@ def spsa_grad(predict, loss_fn, x, y, v, delta):
     :param y: target argument for function `loss_fn`.
     :param v: perturbations of `x`.
     :param delta: scaling parameter of SPSA.
+    :param reduction: how to reduce the gradients of the different samples.
 
     :return: return the approximated gradient of `loss_fn(predict(x), y)`
              with respect to `x`.
     """
+    assert reduction in (
+        "mean", "sum"), "`reduction` should be eigther 'mean' or 'sum'"
 
     xshape = x.shape
     x = x.view(-1, *x.shape[2:])
@@ -67,8 +73,18 @@ def spsa_grad(predict, loss_fn, x, y, v, delta):
         return loss_fn(predict(xvar), yvar)
 
     # assumes v != 0
-    grad = (f(x + delta * v, y) - f(x - delta * v, y)) / (2 * delta * v)
-    grad = grad.view(*xshape).mean(dim=0, keepdim=True)
+    df = f(x + delta * v, y) - f(x - delta * v, y)
+    df = df.view(-1, *[1 for _ in v.shape[1:]])
+
+    grad = df / (2 * delta * v)
+    grad = grad.view(*xshape)
+    if reduction == "mean":
+        grad = grad.mean(dim=0, keepdim=True)
+    elif reduction == "sum":
+        grad = grad.sum(dim=0, keepdim=True)
+    else:
+        raise ValueError("`reduction` should be eigther 'mean' or 'sum'")
+
     return grad
 
 
@@ -92,35 +108,26 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
     :return: the perturbated input.
     """
 
-    if max_batch_size is None:
-        nb_batch = 1
-        batch_size = nb_sample
-    else:
-        nb_batch = ((x.shape[0] * nb_sample + max_batch_size - 1) //
-                    max_batch_size)
-        batch_size = (nb_sample + nb_batch - 1) // nb_batch
-
     x = x.unsqueeze(0)
     y = y.unsqueeze(0)
-    dx = torch.zeros_like(x)
-    x_ = x.expand(batch_size, *x.shape[1:])
-    y_ = y.expand(batch_size, *y.shape[1:])
-    v_ = torch.empty_like(x_)
+    dx = torch.zeros_like(x) # is it necessary to define x after the expansin of x?
+    dx.grad = torch.zeros_like(dx)
     optimizer = torch.optim.Adam([dx], lr=lr)
-
+    # Todo: put the following logic in spsa_grad.
+    xb = x.expand(max_batch_size, *x.shape[1:]).contiguous()
+    yb = y.expand(max_batch_size, *y.shape[1:]).contiguous()
+    vb = torch.empty_like(xb[:, 0:1, ...])
     for _ in range(nb_iter):
         optimizer.zero_grad()
-        for ii in range(nb_batch):
-            if ii == nb_batch - 1 and nb_batch * batch_size > nb_sample:
-                x_ = x.expand(nb_batch * batch_size - nb_sample, *x.shape[1:])
-                y_ = y.expand(nb_batch * batch_size - nb_sample, *y.shape[1:])
-                v_ = torch.empty_like(x_)
-
-            v_ = v_.bernoulli_().mul_(2.0).sub_(1.0)
-            grad = spsa_grad(predict, loss_fn, x_ + dx, y_, v_, delta)
+        for nb_sample_per_batch in chunked_iter(range(nb_sample), max_batch_size): # the use of chunked_iter, and following len() feels a bit clumsy. Any better alternative?
+            vb = vb.bernoulli_().mul_(2.0).sub_(1.0)
+            x_ = xb[:len(nb_sample_per_batch)]
+            y_ = yb[:len(nb_sample_per_batch)]
+            v_ = vb[:len(nb_sample_per_batch)].expand_as(x_).contiguous()
+            grad = spsa_grad(predict, loss_fn, x_ + dx, y_,
+                    v_, delta, reduction="sum")
             dx.grad += grad
-
-        dx.grad /= nb_batch
+        dx.grad /= nb_sample
         optimizer.step()
         dx = linf_clamp_(dx, x, eps, clip_min, clip_max)
 
@@ -152,7 +159,12 @@ class LinfSPSAAttack(Attack, LabelMixin):
         """
 
         if loss_fn is None:
-            loss_fn = MarginalLoss(reduction="sum")
+            loss_fn = MarginalLoss(reduction="none")
+        elif hasattr(loss_fn, "reduction") and \
+                getattr(loss_fn, "reduction") != "none":
+            warnings.warn("`loss_fn` is recommended to have "
+                          "eduction='none' when used in SPSA attack")
+
         super(LinfSPSAAttack, self).__init__(predict, loss_fn,
                                              clip_min, clip_max)
 
