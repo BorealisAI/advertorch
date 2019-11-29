@@ -39,12 +39,16 @@ def linf_clamp_(dx, x, eps, clip_min, clip_max):
 
     dx_clamped = torch.clamp(dx, -eps, eps)
     x_adv = torch.clamp(x + dx_clamped, clip_min, clip_max)
+    # `dx` is changed *inplace* so the optimizer will keep
+    # tracking it. the simplest mechanism for inplace was
+    # adding the difference between the new value `x_adv - x`
+    # and the old value `dx`.
     dx += x_adv - x - dx
     return dx
 
 
 @torch.no_grad()
-def spsa_grad(predict, loss_fn, x, y, v, delta, reduction="mean"):
+def spsa_grad(predict, loss_fn, x, y, delta, nb_sample, max_batch_size):
     """Uses SPSA method to apprixmate gradient w.r.t `x`.
 
     Use the SPSA method to approximate the gradient of `loss_fn(predict(x), y)`
@@ -61,29 +65,33 @@ def spsa_grad(predict, loss_fn, x, y, v, delta, reduction="mean"):
     :return: return the approximated gradient of `loss_fn(predict(x), y)`
              with respect to `x`.
     """
-    assert reduction in (
-        "mean", "sum"), "`reduction` should be eigther 'mean' or 'sum'"
 
-    xshape = x.shape
-    x = x.view(-1, *x.shape[2:])
-    y = y.view(-1, *y.shape[2:])
-    v = v.view(-1, *v.shape[2:])
-
+    grad = torch.zeros_like(x)
+    x = x.unsqueeze(0)
+    y = y.unsqueeze(0)
     def f(xvar, yvar):
         return loss_fn(predict(xvar), yvar)
+    x = x.expand(max_batch_size, *x.shape[1:]).contiguous()
+    y = y.expand(max_batch_size, *y.shape[1:]).contiguous()
+    v = torch.empty_like(x[:, 0:1, ...])
 
-    # assumes v != 0
-    df = f(x + delta * v, y) - f(x - delta * v, y)
-    df = df.view(-1, *[1 for _ in v.shape[1:]])
-
-    grad = df / (2 * delta * v)
-    grad = grad.view(*xshape)
-    if reduction == "mean":
-        grad = grad.mean(dim=0, keepdim=True)
-    elif reduction == "sum":
-        grad = grad.sum(dim=0, keepdim=True)
-    else:
-        raise ValueError("`reduction` should be eigther 'mean' or 'sum'")
+    # the use of chunked_iter, and len() feels a bit clumsy. Any better alternative? I kind of like it though.
+    for nb_sample_per_batch in chunked_iter(range(nb_sample), max_batch_size):
+        x_ = x[:len(nb_sample_per_batch)]
+        y_ = y[:len(nb_sample_per_batch)]
+        x_shape = x_.shape
+        vb = v[:len(nb_sample_per_batch)].bernoulli_().mul_(2.0).sub_(1.0)
+        v_ = vb.expand_as(x_).contiguous()
+        x_ = x_.view(-1, *x.shape[2:])
+        y_ = y_.view(-1, *y.shape[2:])
+        v_ = v_.view(-1, *v.shape[2:])
+        df = f(x_ + delta * v_, y_) - f(x_ - delta * v_, y_)
+        df = df.view(-1, *[1 for _ in v_.shape[1:]])
+        grad_ = df / (2 * delta * v_)
+        grad_ = grad_.view(x_shape)
+        grad_ = grad_.sum(dim=0, keepdim=False)
+        grad += grad_
+    grad /= nb_sample
 
     return grad
 
@@ -108,30 +116,15 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
     :return: the perturbated input.
     """
 
-    x = x.unsqueeze(0)
-    y = y.unsqueeze(0)
-    dx = torch.zeros_like(x) # is it necessary to define x after the expansin of x?
+    dx = torch.zeros_like(x)
     dx.grad = torch.zeros_like(dx)
     optimizer = torch.optim.Adam([dx], lr=lr)
-    # Todo: put the following logic in spsa_grad.
-    xb = x.expand(max_batch_size, *x.shape[1:]).contiguous()
-    yb = y.expand(max_batch_size, *y.shape[1:]).contiguous()
-    vb = torch.empty_like(xb[:, 0:1, ...])
     for _ in range(nb_iter):
         optimizer.zero_grad()
-        for nb_sample_per_batch in chunked_iter(range(nb_sample), max_batch_size): # the use of chunked_iter, and following len() feels a bit clumsy. Any better alternative?
-            vb = vb.bernoulli_().mul_(2.0).sub_(1.0)
-            x_ = xb[:len(nb_sample_per_batch)]
-            y_ = yb[:len(nb_sample_per_batch)]
-            v_ = vb[:len(nb_sample_per_batch)].expand_as(x_).contiguous()
-            grad = spsa_grad(predict, loss_fn, x_ + dx, y_,
-                    v_, delta, reduction="sum")
-            dx.grad += grad
-        dx.grad /= nb_sample
+        dx.grad = spsa_grad(predict, loss_fn, x + dx, y, delta, nb_sample, max_batch_size)
         optimizer.step()
         dx = linf_clamp_(dx, x, eps, clip_min, clip_max)
-
-    x_adv = (x + dx).squeeze(0)
+    x_adv = x + dx
 
     return x_adv
 
