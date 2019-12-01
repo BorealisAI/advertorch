@@ -15,9 +15,9 @@ device = "cuda"
 
 lst_attack = [
     (LinfSPSAAttack, dict(
-        eps=0.3, delta=0.01, lr=0.01, nb_iter=1, nb_sample=128,
+        eps=0.3, delta=0.01, lr=0.01, nb_iter=1000, nb_sample=128,
         max_batch_size=64, targeted=False,
-        loss_fn=nn.CrossEntropyLoss(reduction="sum"),
+        loss_fn=None,
         clip_min=0.0, clip_max=1.0)),
 ]  # each element in the list is the tuple (attack_class, attack_kwargs)
 
