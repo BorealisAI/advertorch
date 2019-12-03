@@ -183,7 +183,7 @@ class FABAttack(Attack, LabelMixin):
         r[r == -1e12] = -r[r == -1e12]
         rs, indr = torch.sort(r, dim=1)
         rs2 = torch.cat((rs[:, 1:],
-                        torch.zeros(rs.shape[0], 1).to(self.device)), 1)
+                         torch.zeros(rs.shape[0], 1).to(self.device)), 1)
         rs[rs == 1e12] = 0
         rs2[rs2 == 1e12] = 0
 
@@ -194,8 +194,8 @@ class FABAttack(Attack, LabelMixin):
         d = -(r * w).clone()
         d = d * (w.abs() > 1e-8).float()
         s = torch.cat(((-w5.squeeze() * rs[:, 0]).unsqueeze(1),
-                      torch.cumsum((-rs2 + rs) * ws, dim=1) -
-                      w5 * rs[:, 0].unsqueeze(-1)), 1)
+                       torch.cumsum((-rs2 + rs) * ws, dim=1) -
+                       w5 * rs[:, 0].unsqueeze(-1)), 1)
 
         c4 = (s[:, 0] + c < 0)
         c3 = ((d * w).sum(dim=1) + c > 0)
@@ -309,7 +309,7 @@ class FABAttack(Attack, LabelMixin):
         self.ndims = len(self.orig_dim)
 
         x = x.detach().clone().float().to(self.device)
-        #assert next(self.predict.parameters()).device == x.device
+        # assert next(self.predict.parameters()).device == x.device
 
         y_pred = self._get_predicted_label(x)
         if y is None:
@@ -343,33 +343,35 @@ class FABAttack(Attack, LabelMixin):
             if counter_restarts > 0:
                 if self.norm == 'Linf':
                     t = 2 * torch.rand(x1.shape).to(self.device) - 1
-                    x1 = im2 + (torch.min(res2,
-                                          self.eps * torch.ones(res2.shape)
-                                          .to(self.device)
-                                          ).reshape([-1, *[1]*self.ndims])
-                                ) * t / (t.reshape([t.shape[0], -1]).abs()
-                                         .max(dim=1, keepdim=True)[0]
-                                         .reshape([-1, *[1]*self.ndims])) * .5
+                    x1 = im2 + (
+                        torch.min(
+                            res2,
+                            self.eps * torch.ones(res2.shape).to(self.device)
+                        ).reshape([-1, *([1] * self.ndims)])
+                    ) * t / (t.reshape([t.shape[0], -1]).abs()
+                             .max(dim=1, keepdim=True)[0]
+                             .reshape([-1, *([1] * self.ndims)])) * .5
                 elif self.norm == 'L2':
                     t = torch.randn(x1.shape).to(self.device)
-                    x1 = im2 + (torch.min(res2,
-                                          self.eps * torch.ones(res2.shape)
-                                          .to(self.device)
-                                          ).reshape([-1, *[1]*self.ndims])
-                                ) * t / ((t ** 2)
-                                         .view(t.shape[0], -1)
-                                         .sum(dim=-1)
-                                         .sqrt()
-                                         .view(t.shape[0], *[1]*self.ndims)) * .5
+                    x1 = im2 + (
+                        torch.min(
+                            res2,
+                            self.eps * torch.ones(res2.shape).to(self.device)
+                        ).reshape([-1, *([1] * self.ndims)])
+                    ) * t / ((t ** 2)
+                             .view(t.shape[0], -1)
+                             .sum(dim=-1)
+                             .sqrt()
+                             .view(t.shape[0], *([1] * self.ndims))) * .5
                 elif self.norm == 'L1':
                     t = torch.randn(x1.shape).to(self.device)
-                    x1 = im2 + (torch.min(res2,
-                                          self.eps * torch.ones(res2.shape)
-                                          .to(self.device)
-                                          ).reshape([-1, *[1]*self.ndims])
-                                ) * t / (t.abs().view(t.shape[0], -1)
-                                         .sum(dim=-1)
-                                         .view(t.shape[0], *[1]*self.ndims)) / 2
+                    x1 = im2 + (torch.min(
+                        res2,
+                        self.eps * torch.ones(res2.shape).to(self.device)
+                    ).reshape([-1, *([1] * self.ndims)])
+                    ) * t / (t.abs().view(t.shape[0], -1)
+                             .sum(dim=-1)
+                             .view(t.shape[0], *([1] * self.ndims))) / 2
 
                 x1 = x1.clamp(0.0, 1.0)
 
@@ -393,8 +395,8 @@ class FABAttack(Attack, LabelMixin):
                         raise ValueError('norm not supported')
                     ind = dist1.min(dim=1)[1]
                     dg2 = dg[u1, ind]
-                    b = (- df[u1, ind] + (dg2 * x1).view(x1.shape[0], -1)
-                                         .sum(dim=-1))
+                    b = (- df[u1, ind] +
+                         (dg2 * x1).view(x1.shape[0], -1).sum(dim=-1))
                     w = dg2.reshape([bs, -1])
 
                     if self.norm == 'Linf':
@@ -416,13 +418,13 @@ class FABAttack(Attack, LabelMixin):
                     d2 = torch.reshape(d3[-bs:], x1.shape)
                     if self.norm == 'Linf':
                         a0 = d3.abs().max(dim=1, keepdim=True)[0]\
-                            .view(-1, *[1]*self.ndims)
+                            .view(-1, *([1] * self.ndims))
                     elif self.norm == 'L2':
                         a0 = (d3 ** 2).sum(dim=1, keepdim=True).sqrt()\
-                            .view(-1, *[1]*self.ndims)
+                            .view(-1, *([1] * self.ndims))
                     elif self.norm == 'L1':
                         a0 = d3.abs().sum(dim=1, keepdim=True)\
-                            .view(-1, *[1]*self.ndims)
+                            .view(-1, *([1] * self.ndims))
                     a0 = torch.max(a0, 1e-8 * torch.ones(
                         a0.shape).to(self.device))
                     a1 = a0[:bs]
@@ -450,9 +452,10 @@ class FABAttack(Attack, LabelMixin):
                             t = (x1[ind_adv] - im2[ind_adv])\
                                 .abs().view(ind_adv.shape[0], -1).sum(dim=-1)
                         adv[ind_adv] = x1[ind_adv] * (t < res2[ind_adv]).\
-                            float().reshape([-1, *[1]*self.ndims]) + adv[ind_adv]\
+                            float().reshape([-1, *([1] * self.ndims)]) \
+                            + adv[ind_adv]\
                             * (t >= res2[ind_adv]).float().reshape(
-                            [-1, *[1]*self.ndims])
+                            [-1, *([1] * self.ndims)])
                         res2[ind_adv] = t * (t < res2[ind_adv]).float()\
                             + res2[ind_adv] * (t >= res2[ind_adv]).float()
                         x1[ind_adv] = im2[ind_adv] + (
@@ -473,6 +476,7 @@ class FABAttack(Attack, LabelMixin):
         adv_c[pred[ind_succ]] = adv[ind_succ].clone()
 
         return adv_c
+
 
 class LinfFABAttack(FABAttack):
     """
@@ -505,6 +509,7 @@ class LinfFABAttack(FABAttack):
             n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
             loss_fn=loss_fn)
 
+
 class L2FABAttack(FABAttack):
     """
     L2 - Fast Adaptive Boundary Attack
@@ -535,6 +540,7 @@ class L2FABAttack(FABAttack):
             predict=predict, norm=norm, n_restarts=n_restarts,
             n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
             loss_fn=loss_fn)
+
 
 class L1FABAttack(FABAttack):
     """
