@@ -6,7 +6,6 @@
 # LICENSE file in the root directory of this source tree.
 #
 #
-#
 # Automatically generated benchmark report (screen print of running this file)
 #
 # sysname: Linux
@@ -22,17 +21,17 @@
 # attack kwargs: eps=0.3
 #                delta=0.01
 #                lr=0.01
-#                nb_iter=100
-#                nb_sample=8192
+#                nb_iter=1000
+#                nb_sample=128
 #                max_batch_size=64
 #                targeted=False
-#                loss_fn=CrossEntropyLoss()
+#                loss_fn=None
 #                clip_min=0.0
 #                clip_max=1.0
 # data: mnist_test, 100 samples
 # model: MNIST LeNet5 standard training
 # accuracy: 99.0%
-# attack success rate: 47.0%
+# attack success rate: 100.0%
 
 # attack type: LinfSPSAAttack
 # attack kwargs: eps=0.3
@@ -42,16 +41,47 @@
 #                nb_sample=8192
 #                max_batch_size=64
 #                targeted=False
-#                loss_fn=CrossEntropyLoss()
+#                loss_fn=None
+#                clip_min=0.0
+#                clip_max=1.0
+# data: mnist_test, 100 samples
+# model: MNIST LeNet5 standard training
+# accuracy: 99.0%
+# attack success rate: 100.0%
+
+# attack type: LinfSPSAAttack
+# attack kwargs: eps=0.3
+#                delta=0.01
+#                lr=0.01
+#                nb_iter=1000
+#                nb_sample=128
+#                max_batch_size=64
+#                targeted=False
+#                loss_fn=None
 #                clip_min=0.0
 #                clip_max=1.0
 # data: mnist_test, 100 samples
 # model: MNIST LeNet 5 PGD training according to Madry et al. 2018
 # accuracy: 100.0%
-# attack success rate: 5.0%
+# attack success rate: 10.0%
+
+# attack type: LinfSPSAAttack
+# attack kwargs: eps=0.3
+#                delta=0.01
+#                lr=0.01
+#                nb_iter=100
+#                nb_sample=8192
+#                max_batch_size=64
+#                targeted=False
+#                loss_fn=None
+#                clip_min=0.0
+#                clip_max=1.0
+# data: mnist_test, 100 samples
+# model: MNIST LeNet 5 PGD training according to Madry et al. 2018
+# accuracy: 100.0%
+# attack success rate: 6.0%
 
 
-import torch.nn as nn
 
 from advertorch_examples.utils import get_mnist_test_loader
 from advertorch_examples.utils import get_mnist_lenet5_clntrained
@@ -68,9 +98,14 @@ device = "cuda"
 
 lst_attack = [
     (LinfSPSAAttack, dict(
+        eps=0.3, delta=0.01, lr=0.01, nb_iter=1000, nb_sample=128,
+        max_batch_size=64, targeted=False,
+        loss_fn=None,
+        clip_min=0.0, clip_max=1.0)),
+    (LinfSPSAAttack, dict(
         eps=0.3, delta=0.01, lr=0.01, nb_iter=100, nb_sample=8192,
         max_batch_size=64, targeted=False,
-        loss_fn=nn.CrossEntropyLoss(reduction="sum"),
+        loss_fn=None,
         clip_min=0.0, clip_max=1.0)),
 ]  # each element in the list is the tuple (attack_class, attack_kwargs)
 

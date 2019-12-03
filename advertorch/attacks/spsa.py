@@ -1,4 +1,5 @@
-# Copyright (c) 2019-present, Royal Bank of Canada.
+# Copyright (c) 2018-present, Royal Bank of Canada and other authors.
+# See the AUTHORS.txt file for a list of contributors.
 # All rights reserved.
 #
 # This source code is licensed under the license found in the
@@ -156,7 +157,7 @@ class LinfSPSAAttack(Attack, LabelMixin):
         elif hasattr(loss_fn, "reduction") and \
                 getattr(loss_fn, "reduction") != "none":
             warnings.warn("`loss_fn` is recommended to have "
-                          "eduction='none' when used in SPSA attack")
+                          "reduction='none' when used in SPSA attack")
 
         super(LinfSPSAAttack, self).__init__(predict, loss_fn,
                                              clip_min, clip_max)

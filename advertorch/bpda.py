@@ -1,4 +1,5 @@
-# Copyright (c) 2018-present, Royal Bank of Canada.
+# Copyright (c) 2018-present, Royal Bank of Canada and other authors.
+# See the AUTHORS.txt file for a list of contributors.
 # All rights reserved.
 #
 # This source code is licensed under the license found in the
