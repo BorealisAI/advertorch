@@ -203,7 +203,7 @@ class FABAttack(Attack, LabelMixin):
         c4 = (s[:, 0] + c < 0)
         c3 = ((d * w).sum(dim=1) + c > 0)
         c6 = c4.nonzero().squeeze()
-        c2 = ((1 - c4) * (1 - c3)).nonzero().squeeze()
+        c2 = ((1 - c4.float()) * (1 - c3.float())).nonzero().squeeze()
         c6 = self.check_shape(c6)
         c2 = self.check_shape(c2)
 
