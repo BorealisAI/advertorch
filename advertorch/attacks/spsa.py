@@ -70,13 +70,15 @@ def spsa_grad(predict, loss_fn, x, y, delta, nb_sample, max_batch_size):
     grad = torch.zeros_like(x)
     x = x.unsqueeze(0)
     y = y.unsqueeze(0)
+
     def f(xvar, yvar):
         return loss_fn(predict(xvar), yvar)
     x = x.expand(max_batch_size, *x.shape[1:]).contiguous()
     y = y.expand(max_batch_size, *y.shape[1:]).contiguous()
     v = torch.empty_like(x[:, 0:1, ...])
 
-    # the use of chunked_iter, and len() feels a bit clumsy. Any better alternative? I kind of like it though.
+    # the use of chunked_iter, and len() feels a bit clumsy.
+    #   Any better alternative? I kind of like it though.
     for nb_sample_per_batch in chunked_iter(range(nb_sample), max_batch_size):
         x_ = x[:len(nb_sample_per_batch)]
         y_ = y[:len(nb_sample_per_batch)]
@@ -122,7 +124,8 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
     optimizer = torch.optim.Adam([dx], lr=lr)
     for _ in range(nb_iter):
         optimizer.zero_grad()
-        dx.grad = spsa_grad(predict, loss_fn, x + dx, y, delta, nb_sample, max_batch_size)
+        dx.grad = spsa_grad(
+            predict, loss_fn, x + dx, y, delta, nb_sample, max_batch_size)
         optimizer.step()
         dx = linf_clamp_(dx, x, eps, clip_min, clip_max)
     x_adv = x + dx
