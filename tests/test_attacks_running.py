@@ -31,7 +31,9 @@ from advertorch.attacks import ElasticNetL1Attack
 from advertorch.attacks import LBFGSAttack
 from advertorch.attacks import JacobianSaliencyMapAttack
 from advertorch.attacks import SpatialTransformAttack
-from advertorch.attacks import FABAttack
+from advertorch.attacks import LinfFABAttack
+from advertorch.attacks import L2FABAttack
+from advertorch.attacks import L1FABAttack
 from advertorch.utils import CarliniWagnerLoss
 from advertorch.utils import torch_allclose
 
@@ -81,9 +83,9 @@ attack_kwargs = {
     DDNL2Attack: {"nb_iter": 5},
     SparseL1DescentAttack: {"rand_init": False, "nb_iter": 5},
     L1PGDAttack: {"rand_init": False, "nb_iter": 5},
-    FABAttack: {"n_iter": 5, "norm": "Linf"},
-    FABAttack: {"n_iter": 5, "norm": "L2"},
-    FABAttack: {"n_iter": 5, "norm": "L1"},
+    LinfFABAttack: {"n_iter": 5},
+    L2FABAttack: {"n_iter": 5},
+    L1FABAttack: {"n_iter": 5},
 }
 
 

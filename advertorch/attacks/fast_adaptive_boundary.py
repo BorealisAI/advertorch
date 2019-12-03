@@ -48,7 +48,9 @@ class FABAttack(Attack, LabelMixin):
             alpha_max=0.1,
             eta=1.05,
             beta=0.9,
-            loss_fn=None):
+            loss_fn=None,
+            verbose=False,
+    ):
         """ FAB-attack implementation in pytorch """
 
         super(FABAttack, self).__init__(
@@ -62,6 +64,7 @@ class FABAttack(Attack, LabelMixin):
         self.eta = eta
         self.beta = beta
         self.targeted = False
+        self.verbose = verbose
 
     def check_shape(self, x):
         return x if len(x.shape) > 0 else x.unsqueeze(0)
@@ -318,7 +321,8 @@ class FABAttack(Attack, LabelMixin):
             y = y.detach().clone().long().to(self.device)
         pred = y_pred == y
         corr_classified = pred.float().sum()
-        print('Clean accuracy: {:.2%}'.format(pred.float().mean()))
+        if self.verbose:
+            print('Clean accuracy: {:.2%}'.format(pred.float().mean()))
         if pred.sum() == 0:
             return x
         pred = self.check_shape(pred.nonzero().squeeze())
@@ -466,10 +470,11 @@ class FABAttack(Attack, LabelMixin):
             counter_restarts += 1
 
         ind_succ = res2 < 1e10
-        print('success rate: {:.0f}/{:.0f}'
-              .format(ind_succ.float().sum(), corr_classified) +
-              ' (on correctly classified points) in {:.1f} s'
-              .format(time.time() - startt))
+        if self.verbose:
+            print('success rate: {:.0f}/{:.0f}'
+                  .format(ind_succ.float().sum(), corr_classified) +
+                  ' (on correctly classified points) in {:.1f} s'
+                  .format(time.time() - startt))
 
         res_c[pred] = res2 * ind_succ.float() + 1e10 * (1 - ind_succ.float())
         ind_succ = self.check_shape(ind_succ.nonzero().squeeze())
@@ -502,12 +507,14 @@ class LinfFABAttack(FABAttack):
             alpha_max=0.1,
             eta=1.05,
             beta=0.9,
-            loss_fn=None):
+            loss_fn=None,
+            verbose=False,
+    ):
         norm = 'Linf'
         super(LinfFABAttack, self).__init__(
             predict=predict, norm=norm, n_restarts=n_restarts,
             n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
-            loss_fn=loss_fn)
+            loss_fn=loss_fn, verbose=verbose)
 
 
 class L2FABAttack(FABAttack):
@@ -534,12 +541,14 @@ class L2FABAttack(FABAttack):
             alpha_max=0.1,
             eta=1.05,
             beta=0.9,
-            loss_fn=None):
+            loss_fn=None,
+            verbose=False,
+    ):
         norm = 'L2'
-        super(LinfFABAttack, self).__init__(
+        super(L2FABAttack, self).__init__(
             predict=predict, norm=norm, n_restarts=n_restarts,
             n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
-            loss_fn=loss_fn)
+            loss_fn=loss_fn, verbose=verbose)
 
 
 class L1FABAttack(FABAttack):
@@ -566,9 +575,11 @@ class L1FABAttack(FABAttack):
             alpha_max=0.1,
             eta=1.05,
             beta=0.9,
-            loss_fn=None):
+            loss_fn=None,
+            verbose=False,
+    ):
         norm = 'L1'
-        super(LinfFABAttack, self).__init__(
+        super(L1FABAttack, self).__init__(
             predict=predict, norm=norm, n_restarts=n_restarts,
             n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
-            loss_fn=loss_fn)
+            loss_fn=loss_fn, verbose=verbose)
