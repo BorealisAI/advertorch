@@ -232,12 +232,12 @@ general_input_attacks = [
     DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,
+    FABAttack,
 ]
 
 image_only_attacks = [
     SpatialTransformAttack,
     LocalSearchAttack,
-    FABAttack,
 ]
 
 label_attacks = [

@@ -81,7 +81,9 @@ attack_kwargs = {
     DDNL2Attack: {"nb_iter": 5},
     SparseL1DescentAttack: {"rand_init": False, "nb_iter": 5},
     L1PGDAttack: {"rand_init": False, "nb_iter": 5},
-    FABAttack: {"n_iter": 5},
+    FABAttack: {"n_iter": 5, "norm": "Linf"},
+    FABAttack: {"n_iter": 5, "norm": "L2"},
+    FABAttack: {"n_iter": 5, "norm": "L1"},
 }
 
 
