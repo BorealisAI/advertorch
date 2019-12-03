@@ -261,7 +261,6 @@ label_attacks = [
 
 feature_attacks = [
     FastFeatureAttack,
-    # LinfSPSAAttack,  # XXX: not exactly sure: test says no
 ]
 
 batch_consistent_attacks = [
