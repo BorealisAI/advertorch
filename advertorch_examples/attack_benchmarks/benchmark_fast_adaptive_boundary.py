@@ -22,43 +22,115 @@
 # attack kwargs: norm=Linf
 #                n_restarts=1
 #                n_iter=20
-#                eps=-1
 #                alpha_max=0.1
 #                eta=1.05
 #                beta=0.9
-#                device=none
-#                loss_fn=none
+#                loss_fn=None
 # data: mnist_test
 # model: MNIST LeNet5 standard training
 # accuracy: 98.89%
 # attack success rate: 100.0%
 # Among successful attacks (Linf norm) on correctly classified examples:
-#    minimum distance: 0.0001394
+#    minimum distance: 0.0001396
 #    median distance: 0.112
-#    maximum distance: 0.2157
+#    maximum distance: 0.2155
 #    average distance: 0.1092
 #    distance standard deviation: 0.03498
+
+# attack type: FABAttack
+# attack kwargs: norm=L2
+#                n_restarts=1
+#                n_iter=20
+#                alpha_max=0.1
+#                eta=1.05
+#                beta=0.9
+#                loss_fn=None
+# data: mnist_test
+# model: MNIST LeNet5 standard training
+# accuracy: 98.89%
+# attack success rate: 100.0%
+# Among successful attacks (Linf norm) on correctly classified examples:
+#    minimum distance: 0.0002932
+#    median distance: 0.2769
+#    maximum distance: 0.7625
+#    average distance: 0.2842
+#    distance standard deviation: 0.1108
+
+# attack type: FABAttack
+# attack kwargs: norm=L1
+#                n_restarts=1
+#                n_iter=20
+#                alpha_max=0.1
+#                eta=1.05
+#                beta=0.9
+#                loss_fn=None
+# data: mnist_test
+# model: MNIST LeNet5 standard training
+# accuracy: 98.89%
+# attack success rate: 99.55%
+# Among successful attacks (Linf norm) on correctly classified examples:
+#    minimum distance: 0.0
+#    median distance: 0.8945
+#    maximum distance: 1.0
+#    average distance: 0.7125
+#    distance standard deviation: 0.3402
 
 # attack type: FABAttack
 # attack kwargs: norm=Linf
 #                n_restarts=1
 #                n_iter=20
-#                eps=-1
 #                alpha_max=0.1
 #                eta=1.05
 #                beta=0.9
-#                device=none
-#                loss_fn=none
+#                loss_fn=None
 # data: mnist_test
 # model: MNIST LeNet 5 PGD training according to Madry et al. 2018
 # accuracy: 98.64%
-# attack success rate: 99.83%
+# attack success rate: 99.86%
 # Among successful attacks (Linf norm) on correctly classified examples:
 #    minimum distance: 0.001405
 #    median distance: 0.3509
-#    maximum distance: 0.6277
-#    average distance: 0.3477
-#    distance standard deviation: 0.05234
+#    maximum distance: 0.6404
+#    average distance: 0.3476
+#    distance standard deviation: 0.05255
+
+# attack type: FABAttack
+# attack kwargs: norm=L2
+#                n_restarts=1
+#                n_iter=20
+#                alpha_max=0.1
+#                eta=1.05
+#                beta=0.9
+#                loss_fn=None
+# data: mnist_test
+# model: MNIST LeNet 5 PGD training according to Madry et al. 2018
+# accuracy: 98.64%
+# attack success rate: 98.35%
+# Among successful attacks (Linf norm) on correctly classified examples:
+#    minimum distance: 0.00102
+#    median distance: 0.1866
+#    maximum distance: 1.0
+#    average distance: 0.2137
+#    distance standard deviation: 0.1098
+
+# attack type: FABAttack
+# attack kwargs: norm=L1
+#                n_restarts=1
+#                n_iter=20
+#                alpha_max=0.1
+#                eta=1.05
+#                beta=0.9
+#                loss_fn=None
+# data: mnist_test
+# model: MNIST LeNet 5 PGD training according to Madry et al. 2018
+# accuracy: 98.64%
+# attack success rate: 94.33%
+# Among successful attacks (Linf norm) on correctly classified examples:
+#    minimum distance: 5.96e-08
+#    median distance: 0.3015
+#    maximum distance: 1.0
+#    average distance: 0.3246
+#    distance standard deviation: 0.1528
 
 
 from advertorch_examples.utils import get_mnist_test_loader
@@ -78,12 +150,26 @@ lst_attack = [
         norm='Linf',
         n_restarts=1,
         n_iter=20,
-        eps=-1,
         alpha_max=0.1,
         eta=1.05,
         beta=0.9,
-        device='none',
-        loss_fn='none')),
+        loss_fn=None)),
+    (FABAttack, dict(
+        norm='L2',
+        n_restarts=1,
+        n_iter=20,
+        alpha_max=0.1,
+        eta=1.05,
+        beta=0.9,
+        loss_fn=None)),
+    (FABAttack, dict(
+        norm='L1',
+        n_restarts=1,
+        n_iter=20,
+        alpha_max=0.1,
+        eta=1.05,
+        beta=0.9,
+        loss_fn=None)),
 ]  # each element in the list is the tuple (attack_class, attack_kwargs)
 
 mnist_clntrained_model = get_mnist_lenet5_clntrained().to(device)
