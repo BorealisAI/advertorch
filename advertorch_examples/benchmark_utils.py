@@ -78,7 +78,7 @@ def benchmark_margin(
         model, loader, attack_class, attack_kwargs, accuracy,
         attack_success_rate)
 
-    rval += "# Among successful attacks (L{} norm) ".format(norm) + \
+    rval += "# Among successful attacks ({} norm) ".format(norm) + \
         "on correctly classified examples:\n"
     rval += "#    minimum distance: {:.4}\n".format(dist.min().item())
     rval += "#    median distance: {:.4}\n".format(dist.median().item())
