@@ -49,12 +49,12 @@
 # model: MNIST LeNet5 standard training
 # accuracy: 98.89%
 # attack success rate: 100.0%
-# Among successful attacks (Linf norm) on correctly classified examples:
-#    minimum distance: 0.0002932
-#    median distance: 0.2769
-#    maximum distance: 0.7625
-#    average distance: 0.2842
-#    distance standard deviation: 0.1108
+# Among successful attacks (L2 norm) on correctly classified examples:
+#    minimum distance: 0.001726
+#    median distance: 1.423
+#    maximum distance: 3.01
+#    average distance: 1.412
+#    distance standard deviation: 0.4805
 
 # attack type: FABAttack
 # attack kwargs: norm=L1
@@ -68,12 +68,12 @@
 # model: MNIST LeNet5 standard training
 # accuracy: 98.89%
 # attack success rate: 99.55%
-# Among successful attacks (Linf norm) on correctly classified examples:
-#    minimum distance: 0.0
-#    median distance: 0.8945
-#    maximum distance: 1.0
-#    average distance: 0.7125
-#    distance standard deviation: 0.3402
+# Among successful attacks (L1 norm) on correctly classified examples:
+#    minimum distance: 0.007688
+#    median distance: 7.61
+#    maximum distance: 36.06
+#    average distance: 8.365
+#    distance standard deviation: 4.42
 
 # attack type: FABAttack
 # attack kwargs: norm=Linf
@@ -106,12 +106,12 @@
 # model: MNIST LeNet 5 PGD training according to Madry et al. 2018
 # accuracy: 98.64%
 # attack success rate: 98.35%
-# Among successful attacks (Linf norm) on correctly classified examples:
-#    minimum distance: 0.00102
-#    median distance: 0.1866
-#    maximum distance: 1.0
-#    average distance: 0.2137
-#    distance standard deviation: 0.1098
+# Among successful attacks (L2 norm) on correctly classified examples:
+#    minimum distance: 0.003942
+#    median distance: 3.04
+#    maximum distance: 19.92
+#    average distance: 3.205
+#    distance standard deviation: 1.311
 
 # attack type: FABAttack
 # attack kwargs: norm=L1
@@ -125,12 +125,13 @@
 # model: MNIST LeNet 5 PGD training according to Madry et al. 2018
 # accuracy: 98.64%
 # attack success rate: 94.33%
-# Among successful attacks (Linf norm) on correctly classified examples:
-#    minimum distance: 5.96e-08
-#    median distance: 0.3015
-#    maximum distance: 1.0
-#    average distance: 0.3246
-#    distance standard deviation: 0.1528
+# Among successful attacks (L1 norm) on correctly classified examples:
+#    minimum distance: 0.00622
+#    median distance: 112.8
+#    maximum distance: 441.9
+#    average distance: 114.6
+#    distance standard deviation: 52.85
+
 
 
 from advertorch_examples.utils import get_mnist_test_loader
