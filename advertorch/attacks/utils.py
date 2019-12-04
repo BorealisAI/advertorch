@@ -101,6 +101,10 @@ def multiple_mini_batch_attack(
     lst_advpred = []
     lst_dist = []
 
+    _norm_convert_dict = {"Linf": "inf", "L2": 2, "L1": 1}
+    if norm in _norm_convert_dict:
+        norm = _norm_convert_dict[norm]
+
     if norm == "inf":
         def dist_func(x, y):
             return (x - y).view(x.size(0), -1).max(dim=1)[0]

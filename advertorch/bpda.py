@@ -14,84 +14,131 @@
 # in PMLR 80:274-283
 
 import torch
-from torch import autograd
 import torch.nn as nn
 
-
-def _wrap_as_staticmethod(old_func):
-    # deprecated for now
-    def new_func(ctx, *args, **kwargs):
-        return old_func(*args, **kwargs)
-    return staticmethod(new_func)
+__all__ = ['BPDAWrapper']
 
 
-def _wrap_forward_as_function_forward(forward):
-    def function_forward(ctx, x):
-        ctx.save_for_backward(x)
-        return forward(x)
-    return staticmethod(function_forward)
+class FunctionWrapper(nn.Module):
+    """`nn.Module` wrapping a `torch.autograd.Function`."""
+
+    def __init__(self, func):
+        """Wraps the provided function `func`.
+
+        :param func: the `torch.autograd.Function` to be wrapped.
+        """
+        super(FunctionWrapper, self).__init__()
+        self.func = func
+
+    def forward(self, *inputs):
+        """Wraps the `forward` method of `func`."""
+        return self.func.apply(*inputs)
 
 
-def _wrap_backward_as_function_backward(backward):
-    def function_backward(ctx, grad_output):
-        x, = ctx.saved_tensors
-        return backward(grad_output, x)
-    return staticmethod(function_backward)
-
-
-def _create_identity_function():
-    def identity(grad_output, x):
-        return grad_output
-    return identity
-
-
-def _create_backward_from_forwardsub(forwardsub):
-    def backward(grad_output, x):
-        # TODO: maybe the detach().clone() pattern can probably be simplified
-        x = x.detach().clone().requires_grad_()
-        grad_output = grad_output.detach().clone()
-        with torch.enable_grad():
-            y = forwardsub(x)
-            # both of the following return function seems working fine,
-            #   using the lower one to make sure there's no side effects
-            # return autograd.grad(y, x, grad_output)
-            return autograd.grad(y, x, grad_output)[0].detach().clone()
-    return backward
-
-
-class BPDAWrapper(nn.Module):
-    """
-    Wrap forward module with BPDA backward path
-    If forwardsub is not None, then ignore backward
-
-    :param forwardsub: substitute forward function for BPDA
-    :param backward: substitute backward function for BPDA
-    """
+class BPDAWrapper(FunctionWrapper):
+    """Backward Pass Differentiable Approximation."""
 
     def __init__(self, forward, forwardsub=None, backward=None):
         """
-        Here we assume forward and forwardsub only takes one input x
-        and backward takes two inputs grad_output and x
-        TODO: adding assert for this, tried inspect.getargspec, but doesn't
-            seem to be easy to cover all cases, regular function, class method
-            and etc...
+        The module should be provided a `forward` method and a `backward`
+        method that approximates the derivatives of `forward`.
+
+        The `forward` function is called in the forward pass, and the
+        `backward` function is used to find gradients in the backward pass.
+
+        The `backward` function can be implicitly provided-by providing
+        `forwardsub` - an alternative forward pass function, which its
+        gradient will be used in the backward pass.
+
+        If not `backward` nor `forwardsub` are provided, the `backward`
+        function will be assumed to be the identity.
+
+        :param forward: `forward(*inputs)` - the forward function for BPDA.
+        :param forwardsub: (Optional) a substitute forward function, for the
+                           gradients approximation of `forward`.
+        :param backward: (Optional) `backward(inputs, grad_outputs)` the
+                         backward pass function for BPDA.
         """
-        super(BPDAWrapper, self).__init__()
+        func = self._create_func(forward, backward, forwardsub)
+        super(BPDAWrapper, self).__init__(func)
 
-        if forwardsub is not None:
-            backward = _create_backward_from_forwardsub(forwardsub)
-        else:
-            if backward is None:
-                backward = _create_identity_function()
+    @classmethod
+    def _create_func(cls, forward_fn, backward_fn, forwardsub_fn):
+        if backward_fn is not None:
+            return cls._create_func_backward(forward_fn, backward_fn)
 
-        self._create_autograd_function_class()
-        self._Function.forward = _wrap_forward_as_function_forward(forward)
-        self._Function.backward = _wrap_backward_as_function_backward(backward)
+        if forwardsub_fn is not None:
+            return cls._create_func_forwardsub(forward_fn, forwardsub_fn)
 
-    def forward(self, *args, **kwargs):
-        return self._Function.apply(*args, **kwargs)
+        return cls._create_func_forward_only(forward_fn)
 
-    def _create_autograd_function_class(self):
-        class _Function(autograd.Function):
-            pass
-        self._Function = _Function
+    @classmethod
+    def _create_func_forward_only(cls, forward_fn):
+        """Creates a differentiable `Function` given the forward function,
+        and the identity as backward function."""
+
+        class Func(torch.autograd.Function):
+
+            @staticmethod
+            def forward(ctx, *inputs, **kwargs):
+                ctx.save_for_backward(*inputs)
+                return forward_fn(*inputs, **kwargs)
+
+            @staticmethod
+            def backward(ctx, *grad_outputs):
+                inputs = ctx.saved_tensors
+                if len(grad_outputs) == len(inputs):
+                    return grad_outputs
+                elif len(grad_outputs) == 1:
+                    return tuple([grad_outputs[0] for _ in inputs])
+
+                raise ValueError("Expected %d gradients but got %d" %
+                                 (len(inputs), len(grad_outputs)))
+
+
+        return Func
+
+    @classmethod
+    def _create_func_forwardsub(cls, forward_fn, forwardsub_fn):
+        """Creates a differentiable `Function` given the forward function,
+        and a substitute forward function.
+
+        The substitute forward function is used to approximate the gradients
+        in the backward pass.
+        """
+
+        class Func(torch.autograd.Function):
+
+            @staticmethod
+            def forward(ctx, *inputs, **kwargs):
+                ctx.save_for_backward(*inputs)
+                return forward_fn(*inputs, **kwargs)
+
+            @staticmethod
+            @torch.enable_grad()  # enables grad in the method's scope
+            def backward(ctx, *grad_outputs):
+                inputs = ctx.saved_tensors
+                inputs = [x.detach().clone().requires_grad_() for x in inputs]
+                outputs = forwardsub_fn(*inputs)
+                return torch.autograd.grad(outputs, inputs, grad_outputs)
+
+        return Func
+
+    @classmethod
+    def _create_func_backward(cls, forward_fn, backward_fn):
+        """Creates a differentiable `Function` given the forward and backward
+        functions."""
+
+        class Func(torch.autograd.Function):
+
+            @staticmethod
+            def forward(ctx, *inputs, **kwargs):
+                ctx.save_for_backward(*inputs)
+                return forward_fn(*inputs, **kwargs)
+
+            @staticmethod
+            def backward(ctx, *grad_outputs):
+                inputs = ctx.saved_tensors
+                return backward_fn(inputs, grad_outputs)
+
+        return Func
