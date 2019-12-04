@@ -100,10 +100,10 @@ def multiple_mini_batch_attack(
     lst_advpred = []
     lst_dist = []
 
-    if norm == "inf":
+    if norm in ["Linf", "inf"]:
         def dist_func(x, y):
             return (x - y).view(x.size(0), -1).max(dim=1)[0]
-    elif norm == 1 or norm == 2:
+    elif norm in ["L1", 1] or norm in ["L2", 2]:
         from advertorch.utils import _get_norm_batch
 
         def dist_func(x, y):
