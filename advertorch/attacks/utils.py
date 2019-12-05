@@ -16,6 +16,7 @@ import torch
 
 from torch.distributions import laplace
 from torch.distributions import uniform
+from torch.nn.modules.loss import _Loss
 
 from advertorch.utils import clamp
 from advertorch.utils import clamp_by_pnorm
@@ -94,7 +95,7 @@ class AttackConfig(object):
 
 
 def multiple_mini_batch_attack(
-        adversary, loader, device="cuda", norm=None):
+        adversary, loader, device="cuda", norm=None, num_batch=None):
     lst_label = []
     lst_pred = []
     lst_advpred = []
@@ -116,6 +117,8 @@ def multiple_mini_batch_attack(
         assert norm is None
 
 
+    idx_batch = 0
+
     for data, label in loader:
         data, label = data.to(device), label.to(device)
         adv = adversary.perturb(data, label)
@@ -127,5 +130,34 @@ def multiple_mini_batch_attack(
         if norm is not None:
             lst_dist.append(dist_func(data, adv))
 
+        idx_batch += 1
+        if idx_batch == num_batch:
+            break
+
     return torch.cat(lst_label), torch.cat(lst_pred), torch.cat(lst_advpred), \
         torch.cat(lst_dist) if norm is not None else None
+
+
+class MarginalLoss(_Loss):
+
+    def forward(self, logits, targets):  # pylint: disable=arguments-differ
+        assert logits.shape[-1] >= 2
+        top_logits, top_classes = torch.topk(logits, 2, dim=-1)
+        target_logits = logits[torch.arange(logits.shape[0]), targets]
+        max_nontarget_logits = torch.where(
+            top_classes[..., 0] == targets,
+            top_logits[..., 1],
+            top_logits[..., 0],
+        )
+
+        loss = max_nontarget_logits - target_logits
+        if self.reduction == "none":
+            pass
+        elif self.reduction == "sum":
+            loss = loss.sum()
+        elif self.reduction == "mean":
+            loss = loss.mean()
+        else:
+            raise ValueError("unknown reduction: '%s'" % (self.recution,))
+
+        return loss

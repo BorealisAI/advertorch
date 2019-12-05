@@ -31,6 +31,7 @@ from advertorch.attacks import ElasticNetL1Attack
 from advertorch.attacks import LBFGSAttack
 from advertorch.attacks import JacobianSaliencyMapAttack
 from advertorch.attacks import SpatialTransformAttack
+from advertorch.attacks import LinfSPSAAttack
 from advertorch.attacks import LinfFABAttack
 from advertorch.attacks import L2FABAttack
 from advertorch.attacks import L1FABAttack
@@ -83,6 +84,7 @@ attack_kwargs = {
     DDNL2Attack: {"nb_iter": 5},
     SparseL1DescentAttack: {"rand_init": False, "nb_iter": 5},
     L1PGDAttack: {"rand_init": False, "nb_iter": 5},
+    LinfSPSAAttack: {"eps": 0.3, "max_batch_size": 63},
     LinfFABAttack: {"n_iter": 5},
     L2FABAttack: {"n_iter": 5},
     L1FABAttack: {"n_iter": 5},
