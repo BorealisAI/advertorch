@@ -1,3 +1,11 @@
+# Copyright (c) 2018-present, Royal Bank of Canada and other authors.
+# See the AUTHORS.txt file for a list of contributors.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+#
+
 import os
 import sys
 
@@ -79,7 +87,7 @@ def benchmark_margin(
         model, loader, attack_class, attack_kwargs, num, accuracy,
         attack_success_rate)
 
-    rval += "# Among successful attacks (L{} norm) ".format(norm) + \
+    rval += "# Among successful attacks ({} norm) ".format(norm) + \
         "on correctly classified examples:\n"
     rval += "#    minimum distance: {:.4}\n".format(dist.min().item())
     rval += "#    median distance: {:.4}\n".format(dist.median().item())

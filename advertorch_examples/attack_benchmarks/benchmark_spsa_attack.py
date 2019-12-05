@@ -1,4 +1,87 @@
-import torch.nn as nn
+# Copyright (c) 2018-present, Royal Bank of Canada and other authors.
+# See the AUTHORS.txt file for a list of contributors.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+#
+#
+# Automatically generated benchmark report (screen print of running this file)
+#
+# sysname: Linux
+# release: 4.4.0-140-generic
+# version: #166-Ubuntu SMP Wed Nov 14 20:09:47 UTC 2018
+# machine: x86_64
+# python: 3.7.3
+# torch: 1.1.0
+# torchvision: 0.3.0
+# advertorch: 0.1.5
+
+# attack type: LinfSPSAAttack
+# attack kwargs: eps=0.3
+#                delta=0.01
+#                lr=0.01
+#                nb_iter=1000
+#                nb_sample=128
+#                max_batch_size=64
+#                targeted=False
+#                loss_fn=None
+#                clip_min=0.0
+#                clip_max=1.0
+# data: mnist_test, 100 samples
+# model: MNIST LeNet5 standard training
+# accuracy: 99.0%
+# attack success rate: 100.0%
+
+# attack type: LinfSPSAAttack
+# attack kwargs: eps=0.3
+#                delta=0.01
+#                lr=0.01
+#                nb_iter=100
+#                nb_sample=8192
+#                max_batch_size=64
+#                targeted=False
+#                loss_fn=None
+#                clip_min=0.0
+#                clip_max=1.0
+# data: mnist_test, 100 samples
+# model: MNIST LeNet5 standard training
+# accuracy: 99.0%
+# attack success rate: 100.0%
+
+# attack type: LinfSPSAAttack
+# attack kwargs: eps=0.3
+#                delta=0.01
+#                lr=0.01
+#                nb_iter=1000
+#                nb_sample=128
+#                max_batch_size=64
+#                targeted=False
+#                loss_fn=None
+#                clip_min=0.0
+#                clip_max=1.0
+# data: mnist_test, 100 samples
+# model: MNIST LeNet 5 PGD training according to Madry et al. 2018
+# accuracy: 100.0%
+# attack success rate: 10.0%
+
+# attack type: LinfSPSAAttack
+# attack kwargs: eps=0.3
+#                delta=0.01
+#                lr=0.01
+#                nb_iter=100
+#                nb_sample=8192
+#                max_batch_size=64
+#                targeted=False
+#                loss_fn=None
+#                clip_min=0.0
+#                clip_max=1.0
+# data: mnist_test, 100 samples
+# model: MNIST LeNet 5 PGD training according to Madry et al. 2018
+# accuracy: 100.0%
+# attack success rate: 6.0%
+
+
 
 from advertorch_examples.utils import get_mnist_test_loader
 from advertorch_examples.utils import get_mnist_lenet5_clntrained
@@ -16,6 +99,11 @@ device = "cuda"
 lst_attack = [
     (LinfSPSAAttack, dict(
         eps=0.3, delta=0.01, lr=0.01, nb_iter=1000, nb_sample=128,
+        max_batch_size=64, targeted=False,
+        loss_fn=None,
+        clip_min=0.0, clip_max=1.0)),
+    (LinfSPSAAttack, dict(
+        eps=0.3, delta=0.01, lr=0.01, nb_iter=100, nb_sample=8192,
         max_batch_size=64, targeted=False,
         loss_fn=None,
         clip_min=0.0, clip_max=1.0)),
