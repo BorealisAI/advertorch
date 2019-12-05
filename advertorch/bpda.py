@@ -36,29 +36,29 @@ class FunctionWrapper(nn.Module):
 
 
 class BPDAWrapper(FunctionWrapper):
-    """Backward Pass Differentiable Approximation."""
+    """Backward Pass Differentiable Approximation.
+
+    The module should be provided a `forward` method and a `backward`
+    method that approximates the derivatives of `forward`.
+
+    The `forward` function is called in the forward pass, and the
+    `backward` function is used to find gradients in the backward pass.
+
+    The `backward` function can be implicitly provided-by providing
+    `forwardsub` - an alternative forward pass function, which its
+    gradient will be used in the backward pass.
+
+    If not `backward` nor `forwardsub` are provided, the `backward`
+    function will be assumed to be the identity.
+
+    :param forward: `forward(*inputs)` - the forward function for BPDA.
+    :param forwardsub: (Optional) a substitute forward function, for the
+                       gradients approximation of `forward`.
+    :param backward: (Optional) `backward(inputs, grad_outputs)` the
+                     backward pass function for BPDA.
+    """
 
     def __init__(self, forward, forwardsub=None, backward=None):
-        """
-        The module should be provided a `forward` method and a `backward`
-        method that approximates the derivatives of `forward`.
-
-        The `forward` function is called in the forward pass, and the
-        `backward` function is used to find gradients in the backward pass.
-
-        The `backward` function can be implicitly provided-by providing
-        `forwardsub` - an alternative forward pass function, which its
-        gradient will be used in the backward pass.
-
-        If not `backward` nor `forwardsub` are provided, the `backward`
-        function will be assumed to be the identity.
-
-        :param forward: `forward(*inputs)` - the forward function for BPDA.
-        :param forwardsub: (Optional) a substitute forward function, for the
-                           gradients approximation of `forward`.
-        :param backward: (Optional) `backward(inputs, grad_outputs)` the
-                         backward pass function for BPDA.
-        """
         func = self._create_func(forward, backward, forwardsub)
         super(BPDAWrapper, self).__init__(func)
 
