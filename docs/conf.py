@@ -118,6 +118,7 @@ extensions = [
     'sphinx.ext.linkcode',
     'nbsphinx',
     'numpydoc',
+    'boltons',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
