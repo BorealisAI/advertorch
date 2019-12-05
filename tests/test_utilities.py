@@ -12,6 +12,7 @@ import torch
 import torchvision.transforms.functional as F
 
 from advertorch.utils import torch_allclose
+from advertorch.utils import clamp
 from advertorch.utils import CIFAR10_MEAN
 from advertorch.utils import CIFAR10_STD
 from advertorch.utils import MNIST_MEAN
@@ -80,3 +81,18 @@ def test_per_image_standardization():
         warnings.simplefilter("ignore")
         tf_scaled = _run_tf_per_image_standardization(imgs)
     assert np.abs(pt_scaled - tf_scaled).max() < 0.001
+
+
+# def test_clamp():
+#     num_data = 10
+#     lst_shape_data = [
+#         (20, ),
+#         (1, 28, 28),
+#     ]
+
+    
+
+
+#     for lst_shape_data
+
+#     data = torch.randn()

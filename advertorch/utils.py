@@ -79,6 +79,40 @@ def clamp(input, min=None, max=None):
         raise ValueError("This is impossible")
 
 
+# def clamp(input, min=None, max=None):
+#     batch_size = input.shape[0]
+#     ndim = input.ndimension()
+#     if min is None:
+#         pass
+#     elif isinstance(min, (float, int)):
+#         input = torch.clamp(input, min=min)
+#     elif isinstance(min, torch.Tensor):
+#         if min.ndimension() == 1 and min.shape[0] == batch_size:
+#             input = torch.max(input, min.view(batch_size, *([1] * (ndim - 1))))
+#         else:
+#             assert min.shape == input.shape
+#             input = torch.max(input, min)
+#     else:
+#         raise ValueError("min can only be None | float | torch.Tensor")
+
+#     if max is None:
+#         pass
+#     elif isinstance(max, (float, int)):
+#         input = torch.clamp(input, max=max)
+#     elif isinstance(max, torch.Tensor):
+#         if max.ndimension() == 1 and max.shape[0] == batch_size:
+#             input = torch.min(input, max.view(batch_size, *([1] * (ndim - 1))))
+#         else:
+#             assert max.shape == input.shape
+#             input = torch.min(input, max)
+#     else:
+#         raise ValueError("max can only be None | float | torch.Tensor")
+
+#     return input
+
+
+
+
 def to_one_hot(y, num_classes=10):
     """
     Take a batch of label y with n dims and convert it to
