@@ -115,5 +115,3 @@ Detailed description
 
 .. autoclass:: JacobianSaliencyMapAttack
    :members:
-
-
