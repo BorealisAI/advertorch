@@ -21,4 +21,3 @@ python:
   version: 3.7
   install:
     - requirements: docs/sphinx_requirements.txt
-    - method: pip
