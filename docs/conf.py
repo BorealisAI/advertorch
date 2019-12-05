@@ -67,12 +67,15 @@ sys.modules['tensorflow'] = Mock()
 sys.modules['theano'] = Mock()
 sys.modules['theano.tensor'] = Mock()
 sys.modules['torch'] = Mock()
+sys.modules['torch.autograd'] = Mock()
+sys.modules['torch.autograd.gradcheck'] = Mock()
 sys.modules['torch.distributions'] = Mock()
 sys.modules['torch.nn'] = Mock()
 sys.modules['torch.nn.functional'] = Mock()
 sys.modules['torch.optim'] = Mock()
 sys.modules['torch.nn.modules'] = Mock()
 sys.modules['torch.nn.modules.utils'] = Mock()
+sys.modules['torch.nn.modules.loss'] = Mock()
 sys.modules['torch.utils'] = Mock()
 sys.modules['torch.utils.model_zoo'] = Mock()
 sys.modules['torch.nn.init'] = Mock()
@@ -115,6 +118,7 @@ extensions = [
     'sphinx.ext.linkcode',
     'nbsphinx',
     'numpydoc',
+    'boltons',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

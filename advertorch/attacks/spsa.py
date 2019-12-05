@@ -134,26 +134,25 @@ def spsa_perturb(predict, loss_fn, x, y, eps, delta, lr, nb_iter,
 
 
 class LinfSPSAAttack(Attack, LabelMixin):
+    """SPSA Attack (Uesato et al. 2018).
+    Based on: https://arxiv.org/abs/1802.05666
+
+    :param predict: predict function (single argument: input).
+    :param eps: the L_inf budget of the attack.
+    :param delta: scaling parameter of SPSA.
+    :param lr: the learning rate of the `Adam` optimizer.
+    :param nb_iter: number of iterations of the attack.
+    :param nb_sample: number of samples for SPSA gradient approximation.
+    :param max_batch_size: maximum batch size to be evaluated at once.
+    :param targeted: [description]
+    :param loss_fn: loss function (dual arguments: output, target).
+    :param clip_min: upper bound of image values.
+    :param clip_max: lower bound of image values.
+    """
 
     def __init__(self, predict, eps, delta=0.01, lr=0.01, nb_iter=1,
                  nb_sample=128, max_batch_size=64, targeted=False,
                  loss_fn=None, clip_min=0.0, clip_max=1.0):
-        """SPSA Attack (Uesato et al. 2018).
-
-        Based on: https://arxiv.org/abs/1802.05666
-
-        :param predict: predict function (single argument: input).
-        :param eps: the L_inf budget of the attack.
-        :param delta: scaling parameter of SPSA.
-        :param lr: the learning rate of the `Adam` optimizer.
-        :param nb_iter: number of iterations of the attack.
-        :param nb_sample: number of samples for SPSA gradient approximation.
-        :param max_batch_size: maximum batch size to be evaluated at once.
-        :param targeted: [description]
-        :param loss_fn: loss function (dual arguments: output, target).
-        :param clip_min: upper bound of image values.
-        :param clip_max: lower bound of image values.
-        """
 
         if loss_fn is None:
             loss_fn = MarginalLoss(reduction="none")
