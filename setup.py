@@ -19,6 +19,6 @@ setup(name='advertorch',
       version=version,
       url='https://github.com/BorealisAI/advertorch',
       package_data={'advertorch_examples': ['*.ipynb', 'trained_models/*.pt']},
-      install_requires=['boltons'],
+      install_requires=[],
       include_package_data=True,
       packages=find_packages())
