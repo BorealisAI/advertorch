@@ -12,7 +12,6 @@ from __future__ import unicode_literals
 
 import warnings
 
-from boltons.iterutils import chunked_iter
 import torch
 
 from .base import Attack
@@ -48,6 +47,13 @@ def linf_clamp_(dx, x, eps, clip_min, clip_max):
     return dx
 
 
+def _get_batch_sizes(n, max_batch_size):
+    batches = [max_batch_size for _ in range(n // max_batch_size)]
+    if n % max_batch_size > 0:
+        batches.append(n % max_batch_size)
+    return batches
+
+
 @torch.no_grad()
 def spsa_grad(predict, loss_fn, x, y, delta, nb_sample, max_batch_size):
     """Uses SPSA method to apprixmate gradient w.r.t `x`.
@@ -75,22 +81,21 @@ def spsa_grad(predict, loss_fn, x, y, delta, nb_sample, max_batch_size):
         return loss_fn(predict(xvar), yvar)
     x = x.expand(max_batch_size, *x.shape[1:]).contiguous()
     y = y.expand(max_batch_size, *y.shape[1:]).contiguous()
-    v = torch.empty_like(x[:, 0:1, ...])
+    v = torch.empty_like(x[:, :1, ...])
 
-    # the use of chunked_iter, and len() feels a bit clumsy.
-    #   Any better alternative? I kind of like it though.
-    for nb_sample_per_batch in chunked_iter(range(nb_sample), max_batch_size):
-        x_ = x[:len(nb_sample_per_batch)]
-        y_ = y[:len(nb_sample_per_batch)]
-        x_shape = x_.shape
-        vb = v[:len(nb_sample_per_batch)].bernoulli_().mul_(2.0).sub_(1.0)
+    for batch_size in _get_batch_sizes(nb_sample, max_batch_size):
+        x_ = x[:batch_size]
+        y_ = y[:batch_size]
+        vb = v[:batch_size]
+        vb = vb.bernoulli_().mul_(2.0).sub_(1.0)
         v_ = vb.expand_as(x_).contiguous()
+        x_shape = x_.shape
         x_ = x_.view(-1, *x.shape[2:])
         y_ = y_.view(-1, *y.shape[2:])
         v_ = v_.view(-1, *v.shape[2:])
         df = f(x_ + delta * v_, y_) - f(x_ - delta * v_, y_)
         df = df.view(-1, *[1 for _ in v_.shape[1:]])
-        grad_ = df / (2 * delta * v_)
+        grad_ = df / (2. * delta * v_)
         grad_ = grad_.view(x_shape)
         grad_ = grad_.sum(dim=0, keepdim=False)
         grad += grad_
