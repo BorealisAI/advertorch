@@ -202,7 +202,7 @@ def batch_l1_proj_flat(x, z=1):
     vv = torch.arange(view_size).float().to(x.device)
     st = (mu.cumsum(1) - z) / (vv + 1)
     u = (mu - st) > 0
-    rho = (1 - u).cumsum(dim=1).eq(0).sum(1) - 1
+    rho = (~u).cumsum(dim=1).eq(0).sum(1) - 1
     theta = st.gather(1, rho.unsqueeze(1))
     proj_x_b = _thresh_by_magnitude(theta, x_b)
 
