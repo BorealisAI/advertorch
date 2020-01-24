@@ -14,6 +14,11 @@ import torch
 from torch.autograd.gradcheck import zero_gradients
 import time
 
+try:
+    from torch import flip
+except ImportError:
+    from advertorch.utils import torch_flip as flip
+
 from advertorch.utils import replicate_input
 
 from .base import Attack
@@ -68,11 +73,6 @@ class FABAttack(Attack, LabelMixin):
 
     def check_shape(self, x):
         return x if len(x.shape) > 0 else x.unsqueeze(0)
-    
-    def flip(self, x, dim):
-        dim = x.dim() + dim if dim < 0 else dim
-        indices = torch.arange(x.size(dim)-1, -1, -1, dtype=torch.long, device=x.device, requires_grad=x.requires_grad)
-        return x.index_select(dim, indices)
 
     def get_diff_logits_grads_batch(self, imgs, la):
         im = imgs.clone().requires_grad_()
@@ -119,7 +119,7 @@ class FABAttack(Attack, LabelMixin):
         b1 = b0.clone()
 
         counter = 0
-        indp2 = self.flip(self.flip(indp.unsqueeze(-1), 1), 2).squeeze()
+        indp2 = flip(indp.unsqueeze(-1), dims=(1, 2)).squeeze()
         u = torch.arange(0, w.shape[0])
         ws = w[u.unsqueeze(1), indp2]
         bs2 = - ws * d[u.unsqueeze(1), indp2]
