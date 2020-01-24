@@ -18,6 +18,7 @@ from advertorch.utils import MNIST_MEAN
 from advertorch.utils import MNIST_STD
 from advertorch.utils import NormalizeByChannelMeanStd
 from advertorch.utils import PerImageStandardize
+from advertorch.utils import torch_flip
 from advertorch_examples.utils import bchw2bhwc
 from advertorch_examples.utils import bhwc2bchw
 
@@ -80,3 +81,8 @@ def test_per_image_standardization():
         warnings.simplefilter("ignore")
         tf_scaled = _run_tf_per_image_standardization(imgs)
     assert np.abs(pt_scaled - tf_scaled).max() < 0.001
+
+
+def test_flip():
+    x = torch.randn(4, 5, 6, 7)
+    assert (torch_flip(x, dims=(1, 2)) == torch.flip(x, dims=(1, 2))).all()
