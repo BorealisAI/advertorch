@@ -82,16 +82,35 @@ def torch_arctanh(x, eps=1e-6):
 
 
 def clamp(input, min=None, max=None):
-    if min is not None and max is not None:
-        return torch.clamp(input, min=min, max=max)
-    elif min is None and max is None:
-        return input
-    elif min is None and max is not None:
-        return torch.clamp(input, max=max)
-    elif min is not None and max is None:
-        return torch.clamp(input, min=min)
+    ndim = input.ndimension()
+    if min is None:
+        pass
+    elif isinstance(min, (float, int)):
+        input = torch.clamp(input, min=min)
+    elif isinstance(min, torch.Tensor):
+        if min.ndimension() == ndim - 1 and min.shape == input.shape[1:]:
+            input = torch.max(input, min.view(1, *min.shape))
+        else:
+            assert min.shape == input.shape
+            input = torch.max(input, min)
     else:
-        raise ValueError("This is impossible")
+        raise ValueError("min can only be None | float | torch.Tensor")
+
+    if max is None:
+        pass
+    elif isinstance(max, (float, int)):
+        input = torch.clamp(input, max=max)
+    elif isinstance(max, torch.Tensor):
+        if max.ndimension() == ndim - 1 and max.shape == input.shape[1:]:
+            input = torch.min(input, max.view(1, *max.shape))
+        else:
+            assert max.shape == input.shape
+            input = torch.min(input, max)
+    else:
+        raise ValueError("max can only be None | float | torch.Tensor")
+    return input
+
+
 
 
 def to_one_hot(y, num_classes=10):
