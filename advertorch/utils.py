@@ -66,19 +66,6 @@ def torch_arctanh(x, eps=1e-6):
     return (torch.log((1 + x) / (1 - x))) * 0.5
 
 
-# def clamp(input, min=None, max=None):
-#     if min is not None and max is not None:
-#         return torch.clamp(input, min=min, max=max)
-#     elif min is None and max is None:
-#         return input
-#     elif min is None and max is not None:
-#         return torch.clamp(input, max=max)
-#     elif min is not None and max is None:
-#         return torch.clamp(input, min=min)
-#     else:
-#         raise ValueError("This is impossible")
-
-
 def clamp(input, min=None, max=None):
     ndim = input.ndimension()
     if min is None:
@@ -93,6 +80,7 @@ def clamp(input, min=None, max=None):
             input = torch.max(input, min)
     else:
         raise ValueError("min can only be None | float | torch.Tensor")
+
     if max is None:
         pass
     elif isinstance(max, (float, int)):

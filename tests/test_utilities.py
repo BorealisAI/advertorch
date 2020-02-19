@@ -83,16 +83,28 @@ def test_per_image_standardization():
     assert np.abs(pt_scaled - tf_scaled).max() < 0.001
 
 
-# def test_clamp():
-#     num_data = 10
-#     lst_shape_data = [
-#         (20, ),
-#         (1, 28, 28),
-#     ]
+def test_clamp():
 
-    
+    def _convert_to_float(x):
+        return float(x) if x is not None else None
+
+    def _convert_to_batch_tensor(x, data):
+        return x * torch.ones_like(data) if x is not None else None
+
+    def _convert_to_single_tensor(x, data):
+        return x * torch.ones_like(data[0]) if x is not None else None
 
 
-#     for lst_shape_data
+    for min, max in [(-1, None), (None, 1), (-1, 1)]:
 
-#     data = torch.randn()
+        data = 3 * torch.randn((11, 12, 13))
+        case1 = clamp(data, min, max)
+        case2 = clamp(data, _convert_to_float(min), _convert_to_float(max))
+        case3 = clamp(data, _convert_to_batch_tensor(min, data),
+                      _convert_to_batch_tensor(max, data))
+        case4 = clamp(data, _convert_to_single_tensor(min, data),
+                      _convert_to_single_tensor(max, data))
+
+        assert torch.all(case1 == case2)
+        assert torch.all(case2 == case3)
+        assert torch.all(case3 == case4)
