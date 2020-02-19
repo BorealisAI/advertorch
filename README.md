@@ -108,3 +108,6 @@ If you use AdverTorch in your research, we kindly ask that you cite the followin
 * Laurent Meunier
 * Alexandre Araujo
 * Jérôme Rony
+* Ben Feinstein
+* Francesco Croce
+* Taro Kiritani
