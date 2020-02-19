@@ -14,6 +14,11 @@ import torch
 from torch.autograd.gradcheck import zero_gradients
 import time
 
+try:
+    from torch import flip
+except ImportError:
+    from advertorch.utils import torch_flip as flip
+
 from advertorch.utils import replicate_input
 
 from .base import Attack
@@ -107,14 +112,14 @@ class FABAttack(Attack, LabelMixin):
         a -= a * (1 - c5)
 
         p = torch.ones(t.shape).to(self.device) * c5 - t * (2 * c5 - 1)
-        indp = torch.argsort(p, dim=1)
+        _, indp = torch.sort(p, dim=1)
 
         b = b - (w * t).sum(1)
         b0 = (w * d).sum(1)
         b1 = b0.clone()
 
         counter = 0
-        indp2 = indp.unsqueeze(-1).flip(dims=(1, 2)).squeeze()
+        indp2 = flip(indp.unsqueeze(-1), dims=(1, 2)).squeeze()
         u = torch.arange(0, w.shape[0])
         ws = w[u.unsqueeze(1), indp2]
         bs2 = - ws * d[u.unsqueeze(1), indp2]
@@ -151,7 +156,7 @@ class FABAttack(Attack, LabelMixin):
         lb = lb.long()
         counter2 = 0
 
-        if c_l.nelement != 0:
+        if c_l.nelement() != 0:
             lmbd_opt = (torch.max((b[c_l] - sb[c_l, -1]) / (-s[c_l, -1]),
                                   torch.zeros(sb[c_l, -1].shape)
                                   .to(self.device))).unsqueeze(-1)

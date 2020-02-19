@@ -27,6 +27,7 @@ from advertorch.attacks import GradientAttack
 from advertorch.attacks import LinfBasicIterativeAttack
 from advertorch.attacks import GradientSignAttack
 from advertorch.attacks import ElasticNetL1Attack
+from advertorch.attacks import LinfSPSAAttack
 from advertorch.attacks import LinfFABAttack
 from advertorch.attacks import L2FABAttack
 from advertorch.attacks import L1FABAttack
@@ -234,6 +235,7 @@ general_input_attacks = [
     DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,
+    LinfSPSAAttack,
     LinfFABAttack,
     L2FABAttack,
     L1FABAttack,
@@ -259,6 +261,7 @@ label_attacks = [
     DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,
+    LinfSPSAAttack,
     LinfFABAttack,
     L2FABAttack,
     L1FABAttack,
@@ -280,6 +283,7 @@ batch_consistent_attacks = [
     DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,
+    LinfSPSAAttack,
     # FABAttack,
     # CarliniWagnerL2Attack,  # XXX: not exactly sure: test says no
     # LBFGSAttack,  # XXX: not exactly sure: test says no

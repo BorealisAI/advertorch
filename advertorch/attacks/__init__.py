@@ -43,6 +43,7 @@ from .spatial import SpatialTransformAttack
 from .jsma import JacobianSaliencyMapAttack
 from .jsma import JSMA
 
+from .spsa import LinfSPSAAttack
 from .fast_adaptive_boundary import FABAttack
 from .fast_adaptive_boundary import LinfFABAttack
 from .fast_adaptive_boundary import L2FABAttack

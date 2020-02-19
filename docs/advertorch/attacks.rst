@@ -19,6 +19,11 @@ Attacks
    LinfPGDAttack
    L2PGDAttack
    L1PGDAttack
+   LinfSPSAAttack
+   FABAttack
+   LinfFABAttack
+   L2FABAttack
+   L1FABAttack
    SparseL1DescentAttack
    MomentumIterativeAttack
    LinfMomentumIterativeAttack
@@ -69,6 +74,21 @@ Detailed description
 .. autoclass:: SparseL1DescentAttack
    :members:
 
+.. autoclass:: LinfSPSAAttack
+   :members:
+
+.. autoclass:: FABAttack
+   :members:
+
+.. autoclass:: LinfFABAttack
+   :members:
+
+.. autoclass:: L2FABAttack
+   :members:
+
+.. autoclass:: L1FABAttack
+   :members:
+
 .. autoclass:: MomentumIterativeAttack
    :members:
 
@@ -95,5 +115,3 @@ Detailed description
 
 .. autoclass:: JacobianSaliencyMapAttack
    :members:
-
-

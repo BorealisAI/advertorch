@@ -6,7 +6,7 @@
 <a href="https://github.com/borealisai/advertorch" target="_blank"><img src="https://raw.githubusercontent.com/borealisai/advertorch/master/assets/advertorch.png?raw=true" alt="advertorch text" width="100"></a> is a Python toolbox for adversarial robustness research. The primary functionalities are implemented in PyTorch. Specifically, AdverTorch contains modules for generating adversarial perturbations and defending against adversarial examples, also scripts for adversarial training.
 
 
-#### Latest version (v0.1)
+#### Latest version (v0.2)
 
 ## Installation
 

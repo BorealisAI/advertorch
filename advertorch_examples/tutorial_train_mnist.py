@@ -68,7 +68,7 @@ if __name__ == '__main__':
             ori = data
             if flag_advtrain:
                 # when performing attack, the model needs to be in eval mode
-                # also the parameters should be accumulating gradients
+                # also the parameters should NOT be accumulating gradients
                 with ctx_noparamgrad_and_eval(model):
                     data = adversary.perturb(data, target)
 

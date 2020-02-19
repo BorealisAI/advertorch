@@ -40,6 +40,21 @@ def torch_allclose(x, y, rtol=1.e-5, atol=1.e-8):
                        rtol=rtol, atol=atol)
 
 
+def single_dim_flip(x, dim):
+    dim = x.dim() + dim if dim < 0 else dim
+    indices = torch.arange(
+        x.size(dim) - 1, -1, -1,
+        dtype=torch.long, device=x.device, requires_grad=x.requires_grad)
+    # TODO: do we need requires_grad???
+    return x.index_select(dim, indices)
+
+
+def torch_flip(x, dims):
+    for dim in dims:
+        x = single_dim_flip(x, dim)
+    return x
+
+
 def replicate_input(x):
     return x.detach().clone()
 
