@@ -92,13 +92,13 @@ class TorchWrappedModel(object):
 def get_madry_et_al_tf_model(dataname, device="cuda"):
     if dataname == "MNIST":
         # XXX:
-        weights_path = weights_path = os.path.join(
+        weights_path = os.path.join(
             MODEL_PATH, 'mnist_challenge/models/secret')
 
         try:
             from mnist_challenge.model import Model
             print("mnist_challenge found and imported")
-        except ImportError:
+        except (ImportError, ModuleNotFoundError):
             print("mnist_challenge not found, downloading ...")
             os.system("bash download_mnist_challenge.sh {}".format(MODEL_PATH))
             from mnist_challenge.model import Model
@@ -119,7 +119,7 @@ def get_madry_et_al_tf_model(dataname, device="cuda"):
         try:
             from cifar10_challenge.model import Model
             print("cifar10_challenge found and imported")
-        except ImportError:
+        except (ImportError, ModuleNotFoundError):
             print("cifar10_challenge not found, downloading ...")
             os.system(
                 "bash download_cifar10_challenge.sh {}".format(MODEL_PATH))
@@ -145,9 +145,9 @@ def get_madry_et_al_tf_model(dataname, device="cuda"):
         return new_forward
 
     def _wrap_backward(backward):
-        def new_backward(logits_grad_val, inputs_val):
+        def new_backward(inputs_val, logits_grad_val):
             return _process_grads_val(backward(
-                logits_grad_val, _process_inputs_val(inputs_val)))
+                *logits_grad_val, _process_inputs_val(*inputs_val)))
         return new_backward
 
 
