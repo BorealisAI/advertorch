@@ -18,7 +18,7 @@ class ZeroOneLoss(_Loss):
 
 
 class LogitMarginLoss(_Loss):
-    """Logit Difference Loss"""
+    """Logit Margin Loss"""
 
     def __init__(self, size_average=None, reduce=None,
                  reduction='elementwise_mean', offset=0.):
@@ -43,7 +43,7 @@ class CWLoss(_Loss):
 
 
 class SoftLogitMarginLoss(_Loss):
-    """Soft Logit Diff Difference Loss"""
+    """Soft Logit Margin Loss"""
 
     def __init__(self, size_average=None, reduce=None,
                  reduction='elementwise_mean', offset=0.):
