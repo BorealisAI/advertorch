@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 import os
 import sys
 import pathlib
+from torch.utils.data.dataset import Subset
 
 import numpy as np
 import torch
@@ -21,11 +22,10 @@ import torchvision.datasets as datasets
 
 from advertorch.test_utils import LeNet5
 
+# TODO: need to refactor path to keep a single copy of file
 
 ROOT_PATH = os.path.expanduser("~/.advertorch")
 DATA_PATH = os.path.join(ROOT_PATH, "data")
-MNIST_PATH = os.path.join(DATA_PATH, "mnist")
-CIFAR10_PATH = os.path.join(DATA_PATH, "cifar10")
 
 path_of_this_module = os.path.dirname(sys.modules[__name__].__file__)
 TRAINED_MODEL_PATH = os.path.join(path_of_this_module, "trained_models")
@@ -37,7 +37,7 @@ def mkdir(directory):
 
 def get_mnist_train_loader(batch_size, shuffle=True):
     loader = torch.utils.data.DataLoader(
-        datasets.MNIST(MNIST_PATH, train=True, download=True,
+        datasets.MNIST(DATA_PATH, train=True, download=True,
                        transform=transforms.ToTensor()),
         batch_size=batch_size, shuffle=shuffle)
     loader.name = "mnist_train"
@@ -46,7 +46,7 @@ def get_mnist_train_loader(batch_size, shuffle=True):
 
 def get_mnist_test_loader(batch_size, shuffle=False):
     loader = torch.utils.data.DataLoader(
-        datasets.MNIST(MNIST_PATH, train=False, download=True,
+        datasets.MNIST(DATA_PATH, train=False, download=True,
                        transform=transforms.ToTensor()),
         batch_size=batch_size, shuffle=shuffle)
     loader.name = "mnist_test"
@@ -55,7 +55,7 @@ def get_mnist_test_loader(batch_size, shuffle=False):
 
 def get_cifar10_train_loader(batch_size, shuffle=True):
     loader = torch.utils.data.DataLoader(
-        datasets.CIFAR10(CIFAR10_PATH, train=True, download=True,
+        datasets.CIFAR10(DATA_PATH, train=True, download=True,
                          transform=transforms.ToTensor()),
         batch_size=batch_size, shuffle=shuffle)
     loader.name = "cifar10_train"
@@ -64,7 +64,7 @@ def get_cifar10_train_loader(batch_size, shuffle=True):
 
 def get_cifar10_test_loader(batch_size, shuffle=False):
     loader = torch.utils.data.DataLoader(
-        datasets.CIFAR10(CIFAR10_PATH, train=False, download=True,
+        datasets.CIFAR10(DATA_PATH, train=False, download=True,
                          transform=transforms.ToTensor()),
         batch_size=batch_size, shuffle=shuffle)
     loader.name = "cifar10_test"
@@ -91,6 +91,82 @@ def get_mnist_lenet5_advtrained():
     model.name = "MNIST LeNet 5 PGD training according to Madry et al. 2018"
     # TODO: also described where can you find this model, and how is it trained
     return model
+
+
+def get_madry_et_al_cifar10_train_transform():
+    return transforms.Compose([
+        transforms.Pad(4, padding_mode="reflect"),
+        transforms.RandomCrop(32),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+    ])
+
+
+
+def get_train_val_loaders(
+        dataset, datapath=DATA_PATH,
+        train_size=None, val_size=5000,
+        train_batch_size=100, val_batch_size=1000,
+        kwargs=None, train_transform=None, val_transform=None,
+        train_shuffle=True, val_shuffle=False):
+    """Support MNIST and CIFAR10"""
+    if kwargs is None:
+        kwargs = {}
+    if train_transform is None:
+        train_transform = transforms.ToTensor()
+    if val_transform is None:
+        val_transform = transforms.ToTensor()
+
+    datapath = os.path.join(datapath, dataset)
+
+    trainset = datasets.__dict__[dataset](
+        datapath, train=True, download=True, transform=train_transform)
+
+    if train_size is not None:
+        assert train_size + val_size <= len(trainset)
+
+    if val_size > 0:
+        indices = list(range(len(trainset)))
+        trainset = Subset(trainset, indices[val_size:])
+
+        valset = datasets.__dict__[dataset](
+            datapath, train=True, download=True, transform=val_transform)
+        valset = Subset(valset, indices[:val_size])
+        val_loader = torch.utils.data.DataLoader(
+            valset, batch_size=val_batch_size, shuffle=val_shuffle, **kwargs)
+
+    else:
+        val_loader = None
+
+    if train_size is not None:
+        trainset = Subset(trainset, list(range(train_size)))
+
+    train_loader = torch.utils.data.DataLoader(
+        trainset, batch_size=train_batch_size, shuffle=train_shuffle, **kwargs)
+
+    return train_loader, val_loader
+
+
+def get_test_loader(
+        dataset, datapath=DATA_PATH, test_size=None, batch_size=1000,
+        transform=None, kwargs=None, shuffle=False):
+    """Support MNIST and CIFAR10"""
+    if kwargs is None:
+        kwargs = {}
+    if transform is None:
+        transform = transforms.ToTensor()
+
+    datapath = os.path.join(datapath, dataset)
+
+    testset = datasets.__dict__[dataset](
+        datapath, train=False, download=True, transform=transform)
+
+    if test_size is not None:
+        testset = Subset(testset, list(range(test_size)))
+
+    test_loader = torch.utils.data.DataLoader(
+        testset, batch_size=batch_size, shuffle=shuffle, **kwargs)
+    return test_loader
 
 
 def bchw2bhwc(x):
@@ -169,4 +245,3 @@ def get_panda_image():
 
 mkdir(ROOT_PATH)
 mkdir(DATA_PATH)
-mkdir(MNIST_PATH)

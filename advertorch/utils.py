@@ -364,3 +364,23 @@ class PerImageStandardize(nn.Module):
 
 def predict_from_logits(logits, dim=1):
     return logits.max(dim=dim, keepdim=False)[1]
+
+
+def get_accuracy(pred, target):
+    return pred.eq(target).float().mean().item()
+
+
+def set_torch_deterministic():
+    import torch.backends.cudnn as cudnn
+    cudnn.benchmark = False
+    cudnn.deterministic = True
+
+
+def set_seed(seed=None):
+    import torch
+    import numpy as np
+    import random
+    if seed is not None:
+        torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
