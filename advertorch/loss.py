@@ -2,8 +2,6 @@ import torch
 from torch.nn.modules.loss import _Loss
 from advertorch.utils import clamp
 
-# TODO: move entire thing to advertorch
-
 
 class ZeroOneLoss(_Loss):
     """Zero-One Loss"""

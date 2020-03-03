@@ -4,7 +4,9 @@ import torch.nn.functional as F
 
 
 class LeNet5Madry(nn.Module):
-    # model replicated from https://github.com/MadryLab/mnist_challenge/blob/2527d24c4c34e511a12b8a9d7cf6b949aae6fc1b/model.py
+    # model replicated from
+    #   https://github.com/MadryLab/mnist_challenge/blob/
+    #   2527d24c4c34e511a12b8a9d7cf6b949aae6fc1b/model.py
     # TODO: combine with the model in advertorch.test_utils
 
     def __init__(
@@ -41,7 +43,9 @@ def get_lenet5madry_with_width(widen_factor):
         nb_hiddens=(7 * 7 * int(widen_factor * 64), int(widen_factor * 1024)))
 
 
-# WideResNet related code adapted from https://github.com/xternalz/WideResNet-pytorch/blob/ae12d25bdf273010bd4a54971948a6c796cb95ed/wideresnet.py
+# WideResNet related code adapted from
+#   https://github.com/xternalz/WideResNet-pytorch/blob/
+#   ae12d25bdf273010bd4a54971948a6c796cb95ed/wideresnet.py
 
 
 class BasicBlock(nn.Module):
