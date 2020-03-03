@@ -13,20 +13,20 @@ class ZeroOneLoss(_Loss):
         super(ZeroOneLoss, self).__init__(size_average, reduce, reduction)
 
     def forward(self, input, target):
-        return logit_diff_loss(input, target, reduction=self.reduction)
+        return logit_margin_loss(input, target, reduction=self.reduction)
 
 
 
-class LogitDiffLoss(_Loss):
+class LogitMarginLoss(_Loss):
     """Logit Difference Loss"""
 
     def __init__(self, size_average=None, reduce=None,
                  reduction='elementwise_mean', offset=0.):
-        super(LogitDiffLoss, self).__init__(size_average, reduce, reduction)
+        super(LogitMarginLoss, self).__init__(size_average, reduce, reduction)
         self.offset = offset
 
     def forward(self, input, target):
-        return logit_diff_loss(
+        return logit_margin_loss(
             input, target, reduction=self.reduction, offset=self.offset)
 
 
@@ -42,17 +42,17 @@ class CWLoss(_Loss):
         return cw_loss(input, target, reduction=self.reduction)
 
 
-class SoftLogitDiffLoss(_Loss):
+class SoftLogitMarginLoss(_Loss):
     """Soft Logit Diff Difference Loss"""
 
     def __init__(self, size_average=None, reduce=None,
                  reduction='elementwise_mean', offset=0.):
-        super(SoftLogitDiffLoss, self).__init__(
+        super(SoftLogitMarginLoss, self).__init__(
             size_average, reduce, reduction)
         self.offset = offset
 
     def forward(self, logits, targets):
-        return soft_logit_diff_loss(
+        return soft_logit_margin_loss(
             logits, targets, reduction=self.reduction, offset=self.offset)
 
 
@@ -69,7 +69,7 @@ def elementwise_margin(logits, label):
     return maxelse - logits[torch.arange(batch_size), label]
 
 
-def logit_diff_loss(input, target, reduction='elementwise_mean', offset=0.):
+def logit_margin_loss(input, target, reduction='elementwise_mean', offset=0.):
     loss = elementwise_margin(input, target)
     return _reduce_loss(loss, reduction) + offset
 
@@ -90,7 +90,7 @@ def _reduce_loss(loss, reduction):
         raise ValueError(reduction + " is not valid")
 
 
-def soft_logit_diff_loss(
+def soft_logit_margin_loss(
         logits, targets, reduction='elementwise_mean', offset=0.):
     batch_size = logits.size(0)
     num_class = logits.size(1)

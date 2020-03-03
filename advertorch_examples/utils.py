@@ -22,6 +22,7 @@ import torchvision.datasets as datasets
 
 from advertorch.test_utils import LeNet5
 
+# TODO: need to refactor path to keep a single copy of file
 
 ROOT_PATH = os.path.expanduser("~/.advertorch")
 DATA_PATH = os.path.join(ROOT_PATH, "data")
