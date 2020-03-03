@@ -200,3 +200,21 @@ class ChooseBestAttack(Attack, LabelMixin):
             maxloss[to_replace] = loss[to_replace]
 
         return final_adv
+
+
+def attack_whole_dataset(adversary, loader, device="cuda"):
+    lst_adv = []
+    lst_label = []
+    lst_pred = []
+    lst_advpred = []
+    for data, label in loader:
+        data, label = data.to(device), label.to(device)
+        pred = predict_from_logits(adversary.predict(data))
+        adv = adversary.perturb(data, label)
+        advpred = predict_from_logits(adversary.predict(adv))
+        lst_label.append(label)
+        lst_pred.append(pred)
+        lst_advpred.append(advpred)
+        lst_adv.append(adv)
+    return torch.cat(lst_adv), torch.cat(lst_label), torch.cat(lst_pred), \
+        torch.cat(lst_advpred)
