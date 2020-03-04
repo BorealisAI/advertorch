@@ -72,7 +72,7 @@ class GradientSignAttack(Attack, LabelMixin):
 
         xadv = clamp(xadv, self.clip_min, self.clip_max)
 
-        return xadv
+        return xadv.detach()
 
 
 FGSM = GradientSignAttack
@@ -128,7 +128,7 @@ class GradientAttack(Attack, LabelMixin):
         xadv = xadv + self.eps * grad
         xadv = clamp(xadv, self.clip_min, self.clip_max)
 
-        return xadv
+        return xadv.detach()
 
 
 FGM = GradientAttack
