@@ -43,6 +43,7 @@ except AttributeError:
     # Old version, use torch.uint8
     boolean_type = torch.uint8
 
+
 class CarliniWagnerL2Attack(Attack, LabelMixin):
     """
     The Carlini and Wagner L2 Attack, https://arxiv.org/abs/1608.04644
@@ -132,7 +133,6 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
 
         return is_successful(pred, label, self.targeted)
 
-
     def _forward_and_update_delta(
             self, optimizer, x_atanh, delta, y_onehot, loss_coeffs):
 
@@ -146,7 +146,6 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
         optimizer.step()
 
         return loss.item(), l2distsq.data, output.data, adv.data
-
 
     def _get_arctanh_x(self, x):
         result = clamp((x - self.clip_min) / (self.clip_max - self.clip_min),
@@ -197,7 +196,6 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
                         coeff_lower_bound[ii] + coeff_upper_bound[ii]) / 2
                 else:
                     loss_coeffs[ii] *= 10
-
 
     def perturb(self, x, y=None):
         x, y = self._verify_and_process_inputs(x, y)
@@ -252,6 +250,7 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
 
         return final_advs
 
+
 class CarliniWagnerLinfAttack(Attack, LabelMixin):
     """
     The Carlini and Wagner LInfinity Attack, https://arxiv.org/abs/1608.04644
@@ -277,8 +276,9 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
     :param clip_max: maximum value per input dimension.
     :param loss_fn: loss function
     """
-    def __init__(self, predict, num_classes, min_tau=1/256,
-                 initial_tau = 1, tau_factor=0.9, initial_const=1e-5,
+
+    def __init__(self, predict, num_classes, min_tau=1 / 256,
+                 initial_tau=1, tau_factor=0.9, initial_const=1e-5,
                  max_const=20, const_factor=2, reduce_const=False,
                  warm_start=True, targeted=False, learning_rate=5e-3,
                  max_iterations=1000, abort_early=True, clip_min=0.,
@@ -320,7 +320,8 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
         return torch_arctanh(result * ONE_MINUS_EPS)
 
     def _outputs_and_loss(self, x, modifiers, starting_atanh, y, const, taus):
-        adversarials = tanh_rescale(starting_atanh + modifiers, self.clip_min, self.clip_max)
+        adversarials = tanh_rescale(
+            starting_atanh + modifiers, self.clip_min, self.clip_max)
 
         outputs = self.predict(adversarials)
         y_onehot = to_one_hot(y, self.num_classes).float()
@@ -341,7 +342,8 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
         image_dimensions = tuple(range(1, len(x.shape)))
         taus_shape = (-1,) + (1,) * (len(x.shape) - 1)
 
-        penalties = torch.clamp(torch.abs(x - adversarials) - taus.view(taus_shape), min=0)
+        penalties = torch.clamp(
+            torch.abs(x - adversarials) - taus.view(taus_shape), min=0)
         loss2 = torch.sum(penalties, dim=image_dimensions)
 
         assert loss1.shape == loss2.shape
@@ -368,7 +370,7 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
             starting_atanh = self._get_arctanh_x(x.clone())
 
         modifiers = torch.nn.Parameter(torch.zeros_like(starting_atanh))
-        
+
         # An array of booleans that stores which samples have not converged
         # yet
         active = torch.ones((batch_size,), dtype=boolean_type, device=x.device)
@@ -379,17 +381,27 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
         while torch.any(active) and const < self.max_const:
             for _ in range(self.max_iterations):
                 optimizer.zero_grad()
-                outputs, loss = self._outputs_and_loss(x[active], modifiers[active], starting_atanh[active], y[active], const, taus[active])
+                outputs, loss = self._outputs_and_loss(
+                    x[active],
+                    modifiers[active],
+                    starting_atanh[active],
+                    y[active],
+                    const,
+                    taus[active])
                 total_loss = torch.sum(loss)
 
                 total_loss.backward()
                 optimizer.step()
 
-                adversarials = tanh_rescale(starting_atanh + modifiers, self.clip_min, self.clip_max).detach()
+                adversarials = tanh_rescale(
+                    starting_atanh + modifiers,
+                    self.clip_min,
+                    self.clip_max).detach()
                 best_adversarials[active] = adversarials[active]
 
-                # If early abortion is enabled, drop successful samples with a small loss
-                # (The current adversarials are saved regardless of whether they are dropped)
+                # If early abortion is enabled, drop successful
+                # samples with a small loss (the current adversarials
+                # are saved regardless of whether they are dropped)
                 if self.abort_early:
                     successful = self._successful(outputs, y[active])
                     small_loss = loss < 0.0001 * const
@@ -405,7 +417,6 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
 
         return best_adversarials
 
-
     def perturb(self, x, y=None):
         x, y = self._verify_and_process_inputs(x, y)
 
@@ -416,7 +427,7 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
         x = replicate_input(x)
         batch_size = len(x)
         final_adversarials = x.clone()
-        
+
         # An array of booleans that stores which samples have not converged
         # yet
         active = torch.ones((batch_size,), dtype=boolean_type, device=x.device)
@@ -429,9 +440,15 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
         prev_adversarials = x.clone()
 
         while torch.any(active):
-            adversarials = self._run_attack(x[active], y[active], initial_const, taus[active], prev_adversarials[active].clone())
+            adversarials = self._run_attack(
+                x[active],
+                y[active],
+                initial_const,
+                taus[active],
+                prev_adversarials[active].clone())
 
-            # Store the adversarials for the next iteration, even if they failed
+            # Store the adversarials for the next iteration,
+            # even if they failed
             prev_adversarials[active] = adversarials
 
             # Drop failed adversarials (without saving them)
@@ -441,14 +458,17 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
 
             # Save the remaining adversarials
             final_adversarials[active] = adversarials[successful]
-            
-            # If the Linf distance is lower than tau and the adversarial is successful, use it as the new tau
-            linf_distances = torch.max(torch.abs(final_adversarials - x).view(batch_size, -1), dim=1)[0]
+
+            # If the Linf distance is lower than tau and the adversarial
+            # is successful, use it as the new tau
+            linf_distances = torch.max(
+                torch.abs(final_adversarials - x).view(batch_size, -1),
+                dim=1)[0]
             linf_lower = linf_distances < taus
             taus[linf_lower] = linf_distances[linf_lower]
 
             taus *= self.tau_factor
-            
+
             if self.reduce_const:
                 initial_const /= 2
 
