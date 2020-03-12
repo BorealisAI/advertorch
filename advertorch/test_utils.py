@@ -5,7 +5,6 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,6 +15,7 @@ from advertorch.attacks import SpatialTransformAttack
 from advertorch.attacks import JacobianSaliencyMapAttack
 from advertorch.attacks import LBFGSAttack
 from advertorch.attacks import CarliniWagnerL2Attack
+from advertorch.attacks import CarliniWagnerLinfAttack
 from advertorch.attacks import DDNL2Attack
 from advertorch.attacks import FastFeatureAttack
 from advertorch.attacks import MomentumIterativeAttack
@@ -228,6 +228,7 @@ general_input_attacks = [
     MomentumIterativeAttack,
     FastFeatureAttack,
     CarliniWagnerL2Attack,
+    CarliniWagnerLinfAttack,
     ElasticNetL1Attack,
     LBFGSAttack,
     JacobianSaliencyMapAttack,
@@ -254,6 +255,7 @@ label_attacks = [
     LinfPGDAttack,
     MomentumIterativeAttack,
     CarliniWagnerL2Attack,
+    CarliniWagnerLinfAttack,
     ElasticNetL1Attack,
     LBFGSAttack,
     JacobianSaliencyMapAttack,
@@ -286,6 +288,7 @@ batch_consistent_attacks = [
     LinfSPSAAttack,
     # FABAttack,
     # CarliniWagnerL2Attack,  # XXX: not exactly sure: test says no
+    CarliniWagnerLinfAttack
     # LBFGSAttack,  # XXX: not exactly sure: test says no
     # SpatialTransformAttack,  # XXX: not exactly sure: test says no
 ]
