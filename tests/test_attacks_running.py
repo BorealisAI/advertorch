@@ -78,7 +78,7 @@ attack_kwargs = {
     MomentumIterativeAttack: {"nb_iter": 5},
     CarliniWagnerL2Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
     CarliniWagnerLinfAttack: {"num_classes": NUM_CLASS, "max_iterations": 2,
-                              "initial_tau": 1/128},
+                              "initial_tau": 1 / 128},
     ElasticNetL1Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
     FastFeatureAttack: {"rand_init": False, "nb_iter": 5},
     LBFGSAttack: {"num_classes": NUM_CLASS},

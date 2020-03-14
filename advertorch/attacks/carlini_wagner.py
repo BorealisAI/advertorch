@@ -20,6 +20,7 @@ from advertorch.utils import torch_arctanh
 from advertorch.utils import clamp
 from advertorch.utils import to_one_hot
 from advertorch.utils import replicate_input
+from advertorch.utils import replace_active
 
 from .base import Attack
 from .base import LabelMixin
@@ -275,6 +276,8 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
     :param clip_min: mininum value per input dimension.
     :param clip_max: maximum value per input dimension.
     :param loss_fn: loss function
+    :param return_best: if True, return the best adversarial found, else
+        return the the last adversarial found.
     """
 
     def __init__(self, predict, num_classes, min_tau=1 / 256,
@@ -282,7 +285,7 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
                  max_const=20, const_factor=2, reduce_const=False,
                  warm_start=True, targeted=False, learning_rate=5e-3,
                  max_iterations=1000, abort_early=True, clip_min=0.,
-                 clip_max=1., loss_fn=None):
+                 clip_max=1., loss_fn=None, return_best=True):
         """Carlini Wagner LInfinity Attack implementation in pytorch."""
         if loss_fn is not None:
             import warnings
@@ -313,6 +316,7 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
         self.abort_early = abort_early
         self.clip_min = clip_min
         self.clip_max = clip_max
+        self.return_best = return_best
 
     def _get_arctanh_x(self, x):
         result = clamp((x - self.clip_min) / (self.clip_max - self.clip_min),
@@ -363,6 +367,8 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
         assert len(x) == len(taus)
         batch_size = len(x)
         best_adversarials = x.clone().detach()
+        best_distances = torch.ones((batch_size,),
+                                    device=x.device) * float("inf")
 
         if self.warm_start:
             starting_atanh = self._get_arctanh_x(prev_adversarials.clone())
@@ -388,29 +394,55 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
                     y[active],
                     const,
                     taus[active])
-                total_loss = torch.sum(loss)
-
-                total_loss.backward()
-                optimizer.step()
 
                 adversarials = tanh_rescale(
                     starting_atanh + modifiers,
                     self.clip_min,
                     self.clip_max).detach()
-                best_adversarials[active] = adversarials[active]
 
-                # If early abortion is enabled, drop successful
+                successful = self._successful(outputs, y[active])
+
+                if self.return_best:
+                    distances = torch.max(
+                                torch.abs(
+                                    x[active] - adversarials[active]
+                                    ).flatten(1),
+                                dim=1)[0]
+                    better_distance = distances < best_distances[active]
+
+                    replace_active(adversarials[active],
+                                   best_adversarials,
+                                   active,
+                                   successful & better_distance)
+                    replace_active(distances,
+                                   best_distances,
+                                   active,
+                                   successful & better_distance)
+                else:
+                    best_adversarials[active] = adversarials[active]
+
+                # If early aborting is enabled, drop successful
                 # samples with a small loss (the current adversarials
                 # are saved regardless of whether they are dropped)
                 if self.abort_early:
-                    successful = self._successful(outputs, y[active])
                     small_loss = loss < 0.0001 * const
 
                     drop = successful & small_loss
-                    active[active] = ~drop
+
+                    # This workaround avoids modifying "active"
+                    # in-place, which would mess with
+                    # gradient computation in backwards()
+                    active_clone = active.clone()
+                    active_clone[active] = ~drop
+                    active = active_clone
 
                 if not active.any():
                     break
+
+                # Update the modifiers
+                total_loss = torch.sum(loss)
+                total_loss.backward()
+                optimizer.step()
 
             # Give more weight to the output loss
             const *= self.const_factor
@@ -426,7 +458,9 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
 
         x = replicate_input(x)
         batch_size = len(x)
-        final_adversarials = x.clone()
+        best_adversarials = x.clone()
+        best_distances = torch.ones((batch_size,),
+                                    device=x.device) * float("inf")
 
         # An array of booleans that stores which samples have not converged
         # yet
@@ -436,7 +470,7 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
         taus = torch.ones((batch_size,), device=x.device) * self.initial_tau
 
         # The previous adversarials. This is used to perform a "warm start"
-        # during optimization
+        # during optimisation
         prev_adversarials = x.clone()
 
         while torch.any(active):
@@ -451,29 +485,46 @@ class CarliniWagnerLinfAttack(Attack, LabelMixin):
             # even if they failed
             prev_adversarials[active] = adversarials
 
-            # Drop failed adversarials (without saving them)
             adversarial_outputs = self.predict(adversarials)
             successful = self._successful(adversarial_outputs, y[active])
-            active[active] = successful
-
-            # Save the remaining adversarials
-            final_adversarials[active] = adversarials[successful]
 
             # If the Linf distance is lower than tau and the adversarial
             # is successful, use it as the new tau
             linf_distances = torch.max(
-                torch.abs(final_adversarials - x).view(batch_size, -1),
+                torch.abs(adversarials - x[active]).flatten(1),
                 dim=1)[0]
-            linf_lower = linf_distances < taus
-            taus[linf_lower] = linf_distances[linf_lower]
+            linf_lower = linf_distances < taus[active]
+
+            replace_active(linf_distances,
+                           taus,
+                           active,
+                           linf_lower & successful)
+
+            # Save the remaining adversarials
+            if self.return_best:
+                better_distance = linf_distances < best_distances[active]
+                replace_active(adversarials,
+                               best_adversarials,
+                               active,
+                               successful & better_distance)
+                replace_active(linf_distances,
+                               best_distances,
+                               active,
+                               successful & better_distance)
+            else:
+                replace_active(adversarials,
+                               best_adversarials,
+                               active,
+                               successful)
 
             taus *= self.tau_factor
 
             if self.reduce_const:
                 initial_const /= 2
 
-            # Drop samples with a low tau
+            # Drop failed samples or with a low tau
             low_tau = taus[active] <= self.min_tau
-            active[active] = ~low_tau
+            drop = low_tau | (~successful)
+            active[active] = ~drop
 
-        return final_adversarials
+        return best_adversarials
