@@ -366,6 +366,9 @@ def predict_from_logits(logits, dim=1):
     return logits.max(dim=dim, keepdim=False)[1]
 
 def replace_active(from_, to, active, filter_):
+    assert len(to) == len(active)
+    assert len(from_) == len(filter_)
+    
     replace_to = active.clone()
     replace_to[active] = filter_
     to[replace_to] = from_[filter_]
