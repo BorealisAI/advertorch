@@ -16,12 +16,16 @@ import torch
 
 from torch.distributions import laplace
 from torch.distributions import uniform
+from torch.nn.modules.loss import _Loss
 
 from advertorch.utils import clamp
 from advertorch.utils import clamp_by_pnorm
 from advertorch.utils import batch_multiply
 from advertorch.utils import normalize_by_pnorm
 from advertorch.utils import predict_from_logits
+from advertorch.loss import ZeroOneLoss
+from advertorch.attacks import Attack, LabelMixin
+
 
 
 def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
@@ -94,7 +98,8 @@ class AttackConfig(object):
 
 
 def multiple_mini_batch_attack(
-        adversary, loader, device="cuda", norm=None):
+        adversary, loader, device="cuda", save_adv=False,
+        norm=None, num_batch=None):
     lst_label = []
     lst_pred = []
     lst_advpred = []
@@ -116,6 +121,8 @@ def multiple_mini_batch_attack(
         assert norm is None
 
 
+    idx_batch = 0
+
     for data, label in loader:
         data, label = data.to(device), label.to(device)
         adv = adversary.perturb(data, label)
@@ -127,5 +134,87 @@ def multiple_mini_batch_attack(
         if norm is not None:
             lst_dist.append(dist_func(data, adv))
 
+        idx_batch += 1
+        if idx_batch == num_batch:
+            break
+
     return torch.cat(lst_label), torch.cat(lst_pred), torch.cat(lst_advpred), \
         torch.cat(lst_dist) if norm is not None else None
+
+
+class MarginalLoss(_Loss):
+    # TODO: move this to advertorch.loss
+
+    def forward(self, logits, targets):  # pylint: disable=arguments-differ
+        assert logits.shape[-1] >= 2
+        top_logits, top_classes = torch.topk(logits, 2, dim=-1)
+        target_logits = logits[torch.arange(logits.shape[0]), targets]
+        max_nontarget_logits = torch.where(
+            top_classes[..., 0] == targets,
+            top_logits[..., 1],
+            top_logits[..., 0],
+        )
+
+        loss = max_nontarget_logits - target_logits
+        if self.reduction == "none":
+            pass
+        elif self.reduction == "sum":
+            loss = loss.sum()
+        elif self.reduction == "mean":
+            loss = loss.mean()
+        else:
+            raise ValueError("unknown reduction: '%s'" % (self.recution,))
+
+        return loss
+
+
+class ChooseBestAttack(Attack, LabelMixin):
+    def __init__(self, predict, base_adversaries, loss_fn=None,
+                 targeted=False):
+        self.predict = predict
+        self.base_adversaries = base_adversaries
+        self.loss_fn = loss_fn
+        self.targeted = targeted
+
+        if self.loss_fn is None:
+            self.loss_fn = ZeroOneLoss(reduction="none")
+        else:
+            assert self.loss_fn.reduction == "none"
+
+        for adversary in self.base_adversaries:
+            assert self.targeted == adversary.targeted
+
+    def perturb(self, x, y=None):
+        # TODO: might want to also retain the list of all attacks
+
+        x, y = self._verify_and_process_inputs(x, y)
+
+        with torch.no_grad():
+            maxloss = self.loss_fn(self.predict(x), y)
+        final_adv = torch.zeros_like(x)
+        for adversary in self.base_adversaries:
+            adv = adversary.perturb(x, y)
+            loss = self.loss_fn(self.predict(adv), y)
+            to_replace = maxloss < loss
+            final_adv[to_replace] = adv[to_replace]
+            maxloss[to_replace] = loss[to_replace]
+
+        return final_adv
+
+
+def attack_whole_dataset(adversary, loader, device="cuda"):
+    lst_adv = []
+    lst_label = []
+    lst_pred = []
+    lst_advpred = []
+    for data, label in loader:
+        data, label = data.to(device), label.to(device)
+        pred = predict_from_logits(adversary.predict(data))
+        adv = adversary.perturb(data, label)
+        advpred = predict_from_logits(adversary.predict(adv))
+        lst_label.append(label)
+        lst_pred.append(pred)
+        lst_advpred.append(advpred)
+        lst_adv.append(adv)
+    return torch.cat(lst_adv), torch.cat(lst_label), torch.cat(lst_pred), \
+        torch.cat(lst_advpred)

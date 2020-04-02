@@ -40,6 +40,21 @@ def torch_allclose(x, y, rtol=1.e-5, atol=1.e-8):
                        rtol=rtol, atol=atol)
 
 
+def single_dim_flip(x, dim):
+    dim = x.dim() + dim if dim < 0 else dim
+    indices = torch.arange(
+        x.size(dim) - 1, -1, -1,
+        dtype=torch.long, device=x.device, requires_grad=x.requires_grad)
+    # TODO: do we need requires_grad???
+    return x.index_select(dim, indices)
+
+
+def torch_flip(x, dims):
+    for dim in dims:
+        x = single_dim_flip(x, dim)
+    return x
+
+
 def replicate_input(x):
     return x.detach().clone()
 
@@ -67,16 +82,35 @@ def torch_arctanh(x, eps=1e-6):
 
 
 def clamp(input, min=None, max=None):
-    if min is not None and max is not None:
-        return torch.clamp(input, min=min, max=max)
-    elif min is None and max is None:
-        return input
-    elif min is None and max is not None:
-        return torch.clamp(input, max=max)
-    elif min is not None and max is None:
-        return torch.clamp(input, min=min)
+    ndim = input.ndimension()
+    if min is None:
+        pass
+    elif isinstance(min, (float, int)):
+        input = torch.clamp(input, min=min)
+    elif isinstance(min, torch.Tensor):
+        if min.ndimension() == ndim - 1 and min.shape == input.shape[1:]:
+            input = torch.max(input, min.view(1, *min.shape))
+        else:
+            assert min.shape == input.shape
+            input = torch.max(input, min)
     else:
-        raise ValueError("This is impossible")
+        raise ValueError("min can only be None | float | torch.Tensor")
+
+    if max is None:
+        pass
+    elif isinstance(max, (float, int)):
+        input = torch.clamp(input, max=max)
+    elif isinstance(max, torch.Tensor):
+        if max.ndimension() == ndim - 1 and max.shape == input.shape[1:]:
+            input = torch.min(input, max.view(1, *max.shape))
+        else:
+            assert max.shape == input.shape
+            input = torch.min(input, max)
+    else:
+        raise ValueError("max can only be None | float | torch.Tensor")
+    return input
+
+
 
 
 def to_one_hot(y, num_classes=10):
@@ -330,3 +364,23 @@ class PerImageStandardize(nn.Module):
 
 def predict_from_logits(logits, dim=1):
     return logits.max(dim=dim, keepdim=False)[1]
+
+
+def get_accuracy(pred, target):
+    return pred.eq(target).float().mean().item()
+
+
+def set_torch_deterministic():
+    import torch.backends.cudnn as cudnn
+    cudnn.benchmark = False
+    cudnn.deterministic = True
+
+
+def set_seed(seed=None):
+    import torch
+    import numpy as np
+    import random
+    if seed is not None:
+        torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)

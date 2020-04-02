@@ -318,9 +318,10 @@ class L2BasicIterativeAttack(PGDAttack):
                  eps_iter=0.05, clip_min=0., clip_max=1., targeted=False):
         ord = 2
         rand_init = False
+        l1_sparsity = None
         super(L2BasicIterativeAttack, self).__init__(
             predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
-            clip_min, clip_max, ord, targeted)
+            clip_min, clip_max, ord, l1_sparsity, targeted)
 
 
 class LinfBasicIterativeAttack(PGDAttack):
@@ -344,9 +345,10 @@ class LinfBasicIterativeAttack(PGDAttack):
                  eps_iter=0.05, clip_min=0., clip_max=1., targeted=False):
         ord = np.inf
         rand_init = False
+        l1_sparsity = None
         super(LinfBasicIterativeAttack, self).__init__(
             predict, loss_fn, eps, nb_iter, eps_iter, rand_init,
-            clip_min, clip_max, ord, targeted)
+            clip_min, clip_max, ord, l1_sparsity, targeted)
 
 
 class MomentumIterativeAttack(Attack, LabelMixin):
