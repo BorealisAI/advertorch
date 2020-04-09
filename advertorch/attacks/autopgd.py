@@ -53,7 +53,6 @@ class APGDAttack(Attack, LabelMixin):
         super(APGDAttack, self).__init__(
             predict, loss_fn=None, clip_min=0., clip_max=1.)
 
-        self.predict = predict
         self.n_iter = n_iter
         self.eps = eps
         self.norm = norm
