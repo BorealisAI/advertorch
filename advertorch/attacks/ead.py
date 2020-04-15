@@ -272,27 +272,28 @@ class ElasticNetL1Attack(Attack, LabelMixin):
                     x, yy_k, xx_k)
 
                 # loss ElasticNet or L1 over xx_k
-                output = self.predict(xx_k)
-                l2distsq = calc_l2distsq(xx_k, x)
-                l1dist = calc_l1dist(xx_k, x)
+                with torch.no_grad():
+                    output = self.predict(xx_k)
+                    l2distsq = calc_l2distsq(xx_k, x)
+                    l1dist = calc_l1dist(xx_k, x)
 
-                if self.decision_rule == 'EN':
-                    dist = l2distsq + (l1dist * self.beta)
-                elif self.decision_rule == 'L1':
-                    dist = l1dist
-                loss = self._loss_fn(
-                    output, y_onehot, l1dist, l2distsq, loss_coeffs)
+                    if self.decision_rule == 'EN':
+                        dist = l2distsq + (l1dist * self.beta)
+                    elif self.decision_rule == 'L1':
+                        dist = l1dist
+                    loss = self._loss_fn(
+                        output, y_onehot, l1dist, l2distsq, loss_coeffs)
 
-                if self.abort_early:
-                    if ii % (self.max_iterations // NUM_CHECKS or 1) == 0:
-                        if loss > prevloss * ONE_MINUS_EPS:
-                            break
-                        prevloss = loss
+                    if self.abort_early:
+                        if ii % (self.max_iterations // NUM_CHECKS or 1) == 0:
+                            if loss > prevloss * ONE_MINUS_EPS:
+                                break
+                            prevloss = loss
 
-                self._update_if_smaller_dist_succeed(
-                    xx_k.data, y, output, dist, batch_size,
-                    cur_dist, cur_labels,
-                    final_dist, final_labels, final_advs)
+                    self._update_if_smaller_dist_succeed(
+                        xx_k.data, y, output, dist, batch_size,
+                        cur_dist, cur_labels,
+                        final_dist, final_labels, final_advs)
 
             self._update_loss_coeffs(
                 y, cur_labels, batch_size,
