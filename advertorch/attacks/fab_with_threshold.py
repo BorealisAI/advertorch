@@ -45,14 +45,14 @@ class FABWithThreshold(FABAttack):
             beta=0.9,
             verbose=False,
             seed=0):
-        
+
         super(FABWithThreshold, self).__init__(
             predict=predict, norm=norm, n_restarts=n_restarts,
             n_iter=n_iter, eps=eps, alpha_max=alpha_max, eta=eta, beta=beta,
             verbose=verbose)
-        
+
         self.seed = seed
-        
+
     def init_hyperparam(self, x):
         assert self.norm in ['Linf', 'L2', 'L1']
         assert not self.eps is None
@@ -62,13 +62,13 @@ class FABWithThreshold(FABAttack):
         self.ndims = len(self.orig_dim)
         if self.seed is None:
             self.seed = time.time()
-    
+
     def attack_single_run(self, x, y, use_rand_start=False):
         startt = time.time()
         if len(x.shape) == self.ndims:
             x = x.unsqueeze(0)
             y = y.unsqueeze(0)
-        
+
         im2 = x.clone()
         la2 = y.clone()
         bs = im2.shape[0]
@@ -79,7 +79,7 @@ class FABWithThreshold(FABAttack):
         res_c = torch.zeros([x.shape[0]]).to(self.device)
         x1 = im2.clone()
         x0 = im2.clone().reshape([bs, -1])
-        
+
         if use_rand_start:
             if self.norm == 'Linf':
                 t = 2 * torch.rand(x1.shape).to(self.device) - 1

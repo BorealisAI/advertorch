@@ -31,6 +31,7 @@ from advertorch.attacks import LinfSPSAAttack
 from advertorch.attacks import LinfFABAttack
 from advertorch.attacks import L2FABAttack
 from advertorch.attacks import L1FABAttack
+from advertorch.attacks import SquareAttack
 from advertorch.defenses import JPEGFilter
 from advertorch.defenses import BitSqueezing
 from advertorch.defenses import MedianSmoothing2D
@@ -244,6 +245,7 @@ general_input_attacks = [
 image_only_attacks = [
     SpatialTransformAttack,
     LocalSearchAttack,
+    SquareAttack,
 ]
 
 label_attacks = [
@@ -265,6 +267,7 @@ label_attacks = [
     LinfFABAttack,
     L2FABAttack,
     L1FABAttack,
+    SquareAttack,
 ]
 
 feature_attacks = [

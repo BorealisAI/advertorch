@@ -194,17 +194,17 @@ class SquareAttack(Attack, LabelMixin):
             c, h, w = x.shape[1:]
             n_features = c * h * w
             n_ex_total = x.shape[0]
-            
+
             if self.norm == 'Linf':
                 x_best = torch.clamp(x + self.eps * self.random_choice(
                     [x.shape[0], c, 1, w]), 0., 1.)
                 margin_min, loss_min = self.margin_and_loss(x_best, y)
                 n_queries = torch.ones(x.shape[0]).to(self.device)
                 s_init = int(math.sqrt(self.p_init * n_features / c))
-                
+
                 for i_iter in range(self.n_queries):
                     idx_to_fool = (margin_min > 0.0).nonzero().squeeze()
-                    
+
                     x_curr = self.check_shape(x[idx_to_fool])
                     x_best_curr = self.check_shape(x_best[idx_to_fool])
                     y_curr = y[idx_to_fool]
@@ -212,7 +212,7 @@ class SquareAttack(Attack, LabelMixin):
                         y_curr = y_curr.unsqueeze(0)
                     margin_min_curr = margin_min[idx_to_fool]
                     loss_min_curr = loss_min[idx_to_fool]
-                    
+
                     p = self.p_selection(i_iter)
                     s = max(int(round(math.sqrt(p * n_features / c))), 1)
                     vh = self.random_int(0, h - s)
@@ -220,21 +220,21 @@ class SquareAttack(Attack, LabelMixin):
                     new_deltas = torch.zeros([c, h, w]).to(self.device)
                     new_deltas[:, vh:vh + s, vw:vw + s
                         ] = 2. * self.eps * self.random_choice([c, 1, 1])
-                    
+
                     x_new = x_best_curr + new_deltas
                     x_new = torch.min(torch.max(x_new, x_curr - self.eps),
                         x_curr + self.eps)
                     x_new = torch.clamp(x_new, 0., 1.)
                     x_new = self.check_shape(x_new)
-                    
+
                     margin, loss = self.margin_and_loss(x_new, y_curr)
-                    
+
                     idx_improved = (loss < loss_min_curr).float()
                     margin_min[idx_to_fool] = idx_improved * margin + (
                         1. - idx_improved) * margin_min_curr
                     loss_min[idx_to_fool] = idx_improved * loss + (
                         1. - idx_improved) * loss_min_curr
-                    
+
                     idx_miscl = (margin <= 0.).float()
                     idx_improved = torch.max(idx_improved, idx_miscl)
                     idx_improved = idx_improved.reshape([-1,
@@ -242,7 +242,7 @@ class SquareAttack(Attack, LabelMixin):
                     x_best[idx_to_fool] = idx_improved * x_new + (
                         1. - idx_improved) * x_best_curr
                     n_queries[idx_to_fool] += 1.
-            
+
                     ind_succ = (margin_min <= 0.).nonzero().squeeze()
                     if self.verbose and ind_succ.numel() != 0:
                         print('{}'.format(i_iter + 1),
@@ -254,10 +254,10 @@ class SquareAttack(Attack, LabelMixin):
                             '- med # queries={:.1f}'.format(
                             n_queries[ind_succ].median().item()),
                             '- loss={:.3f}'.format(loss_min.mean()))
-                    
+
                     if ind_succ.numel() == n_ex_total:
                         break
-              
+
             elif self.norm == 'L2':
                 delta_init = torch.zeros_like(x)
                 s = h // 5

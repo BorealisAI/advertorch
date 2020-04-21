@@ -44,9 +44,18 @@ from .jsma import JacobianSaliencyMapAttack
 from .jsma import JSMA
 
 from .spsa import LinfSPSAAttack
+
 from .fast_adaptive_boundary import FABAttack
 from .fast_adaptive_boundary import LinfFABAttack
 from .fast_adaptive_boundary import L2FABAttack
 from .fast_adaptive_boundary import L1FABAttack
+
+from .fab_with_threshold import FABWithThreshold
+from .fab_with_threshold import FABTargeted
+
+from .autopgd import APGDAttack
+from .autopgd import APGDTargeted
+
+from .square import SquareAttack
 
 from .utils import ChooseBestAttack
