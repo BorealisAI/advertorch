@@ -35,6 +35,7 @@ from advertorch.attacks import LinfSPSAAttack
 from advertorch.attacks import LinfFABAttack
 from advertorch.attacks import L2FABAttack
 from advertorch.attacks import L1FABAttack
+from advertorch.attacks import DeepfoolLinfAttack
 from advertorch.utils import CarliniWagnerLoss
 from advertorch.utils import torch_allclose
 
@@ -88,6 +89,7 @@ attack_kwargs = {
     LinfFABAttack: {"n_iter": 5},
     L2FABAttack: {"n_iter": 5},
     L1FABAttack: {"n_iter": 5},
+    DeepfoolLinfAttack: {"n_iter": 5},
 }
 
 
