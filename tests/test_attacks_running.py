@@ -17,11 +17,12 @@ import torch
 import torch.nn as nn
 
 from advertorch.attacks import GradientSignAttack
-from advertorch.attacks import LinfBasicIterativeAttack
 from advertorch.attacks import GradientAttack
 from advertorch.attacks import L2BasicIterativeAttack
-from advertorch.attacks import LinfPGDAttack
+from advertorch.attacks import LinfBasicIterativeAttack
 from advertorch.attacks import L1PGDAttack
+from advertorch.attacks import L2PGDAttack
+from advertorch.attacks import LinfPGDAttack
 from advertorch.attacks import SparseL1DescentAttack
 from advertorch.attacks import MomentumIterativeAttack
 from advertorch.attacks import FastFeatureAttack
@@ -71,9 +72,15 @@ devices = (cpu, cuda) if torch.cuda.is_available() else (cpu, )
 attack_kwargs = {
     GradientSignAttack: {},
     GradientAttack: {},
-    LinfBasicIterativeAttack: {"nb_iter": 5},
-    L2BasicIterativeAttack: {"nb_iter": 5},
-    LinfPGDAttack: {"rand_init": False, "nb_iter": 5},
+    SparseL1DescentAttack: {
+        "rand_init": False, "nb_iter": 5, "eps": 3., "eps_iter": 1.},
+    L1PGDAttack: {"rand_init": False, "nb_iter": 5, "eps": 3., "eps_iter": 1.},
+    L2BasicIterativeAttack: {"nb_iter": 5, "eps": 1., "eps_iter": 0.33},
+    L2PGDAttack: {
+        "rand_init": False, "nb_iter": 5, "eps": 1., "eps_iter": 0.33},
+    LinfBasicIterativeAttack: {"nb_iter": 5, "eps": 0.3, "eps_iter": 0.1},
+    LinfPGDAttack: {
+        "rand_init": False, "nb_iter": 5, "eps": 0.3, "eps_iter": 0.1},
     MomentumIterativeAttack: {"nb_iter": 5},
     CarliniWagnerL2Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
     ElasticNetL1Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
@@ -82,8 +89,6 @@ attack_kwargs = {
     JacobianSaliencyMapAttack: {"num_classes": NUM_CLASS, "gamma": 0.01},
     SpatialTransformAttack: {"num_classes": NUM_CLASS},
     DDNL2Attack: {"nb_iter": 5},
-    SparseL1DescentAttack: {"rand_init": False, "nb_iter": 5},
-    L1PGDAttack: {"rand_init": False, "nb_iter": 5},
     LinfSPSAAttack: {"eps": 0.3, "max_batch_size": 63},
     LinfFABAttack: {"n_iter": 5},
     L2FABAttack: {"n_iter": 5},

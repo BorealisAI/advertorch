@@ -64,7 +64,7 @@ def test_withgrad(device, def_cls):
     "device, def_cls",
     itertools.product(devices, nograd_defenses))
 def test_defenses_nograd(device, def_cls):
-    with pytest.raises(NotImplementedError):
+    with pytest.raises((RuntimeError, NotImplementedError)):
         defense = def_cls(**defense_kwargs[def_cls])
         data = defense_data[def_cls]
         data.requires_grad_()
