@@ -295,6 +295,19 @@ targeted_only_attacks = [
     JacobianSaliencyMapAttack,
 ]
 
+# attacks that can take vector form of eps and eps_iter
+vec_eps_attacks = [
+    LinfBasicIterativeAttack,
+    L2BasicIterativeAttack,
+    LinfPGDAttack,
+    FastFeatureAttack,
+    SparseL1DescentAttack,
+    L1PGDAttack,
+    GradientSignAttack,
+    GradientAttack,
+    MomentumIterativeAttack,  # TODO: later
+    LinfSPSAAttack,  # TODO: later
+]
 
 # ###########################################################
 # helper functions

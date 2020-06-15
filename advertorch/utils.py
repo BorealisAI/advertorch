@@ -223,7 +223,7 @@ def batch_l1_proj_flat(x, z=1):
     # Getting the elements to project in the batch
     indexes_b = torch.nonzero(v > z).view(-1)
     if isinstance(z, torch.Tensor):
-        z[indexes_b][:, None]
+        z = z[indexes_b][:, None]
     x_b = x[indexes_b]
     batch_size_b = x_b.size(0)
 
