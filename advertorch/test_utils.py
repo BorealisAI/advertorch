@@ -305,8 +305,8 @@ vec_eps_attacks = [
     L1PGDAttack,
     GradientSignAttack,
     GradientAttack,
-    MomentumIterativeAttack,  # TODO: later
-    LinfSPSAAttack,  # TODO: later
+    MomentumIterativeAttack,
+    LinfSPSAAttack,
 ]
 
 # ###########################################################
