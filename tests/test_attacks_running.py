@@ -17,11 +17,12 @@ import torch
 import torch.nn as nn
 
 from advertorch.attacks import GradientSignAttack
-from advertorch.attacks import LinfBasicIterativeAttack
 from advertorch.attacks import GradientAttack
 from advertorch.attacks import L2BasicIterativeAttack
-from advertorch.attacks import LinfPGDAttack
+from advertorch.attacks import LinfBasicIterativeAttack
 from advertorch.attacks import L1PGDAttack
+from advertorch.attacks import L2PGDAttack
+from advertorch.attacks import LinfPGDAttack
 from advertorch.attacks import SparseL1DescentAttack
 from advertorch.attacks import MomentumIterativeAttack
 from advertorch.attacks import FastFeatureAttack
@@ -46,6 +47,7 @@ from advertorch.test_utils import image_only_attacks
 from advertorch.test_utils import label_attacks
 from advertorch.test_utils import feature_attacks
 from advertorch.test_utils import targeted_only_attacks
+from advertorch.test_utils import vec_eps_attacks
 
 from advertorch.test_utils import vecdata
 from advertorch.test_utils import veclabel
@@ -71,9 +73,15 @@ devices = (cpu, cuda) if torch.cuda.is_available() else (cpu, )
 attack_kwargs = {
     GradientSignAttack: {},
     GradientAttack: {},
-    LinfBasicIterativeAttack: {"nb_iter": 5},
-    L2BasicIterativeAttack: {"nb_iter": 5},
-    LinfPGDAttack: {"rand_init": False, "nb_iter": 5},
+    SparseL1DescentAttack: {
+        "rand_init": False, "nb_iter": 5, "eps": 3., "eps_iter": 1.},
+    L1PGDAttack: {"rand_init": False, "nb_iter": 5, "eps": 3., "eps_iter": 1.},
+    L2BasicIterativeAttack: {"nb_iter": 5, "eps": 1., "eps_iter": 0.33},
+    L2PGDAttack: {
+        "rand_init": False, "nb_iter": 5, "eps": 1., "eps_iter": 0.33},
+    LinfBasicIterativeAttack: {"nb_iter": 5, "eps": 0.3, "eps_iter": 0.1},
+    LinfPGDAttack: {
+        "rand_init": False, "nb_iter": 5, "eps": 0.3, "eps_iter": 0.1},
     MomentumIterativeAttack: {"nb_iter": 5},
     CarliniWagnerL2Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
     ElasticNetL1Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
@@ -82,8 +90,6 @@ attack_kwargs = {
     JacobianSaliencyMapAttack: {"num_classes": NUM_CLASS, "gamma": 0.01},
     SpatialTransformAttack: {"num_classes": NUM_CLASS},
     DDNL2Attack: {"nb_iter": 5},
-    SparseL1DescentAttack: {"rand_init": False, "nb_iter": 5},
-    L1PGDAttack: {"rand_init": False, "nb_iter": 5},
     LinfSPSAAttack: {"eps": 0.3, "max_batch_size": 63},
     LinfFABAttack: {"n_iter": 5},
     L2FABAttack: {"n_iter": 5},
@@ -196,6 +202,36 @@ def test_batch_consistent_on_vec(idx, att_cls):
         [0, BATCH_SIZE // 2, BATCH_SIZE - 1], batch_consistent_attacks))
 def test_batch_consistent_on_img(idx, att_cls):
     _run_batch_consistent(imgdata, imglabel, imgmodel, att_cls, idx)
+
+
+def _run_vec_eps_consistent(data, label, model, att_cls):
+    if att_cls in feature_attacks:
+        guide = data.detach().clone()[torch.randperm(len(data))]
+        data, guide = data.to(cpu), guide.to(cpu)
+        label_or_guide = guide
+    else:
+        label_or_guide = label
+    model.to(cpu)
+    data, label_or_guide = data.to(cpu), label_or_guide.to(cpu)
+    adversary = att_cls(model, **attack_kwargs[att_cls])
+    torch.manual_seed(0)
+    a = adversary.perturb(data, label_or_guide)
+
+    _vec_ones = data.new_ones(size=(len(data),))
+    _mat_ones = torch.ones_like(data)
+    adversary.eps = adversary.eps * _vec_ones
+    if hasattr(adversary, "eps_iter"):
+        adversary.eps_iter = adversary.eps_iter * _vec_ones
+    adversary.clip_min = adversary.clip_min * _mat_ones
+    adversary.clip_max = adversary.clip_max * _mat_ones
+    torch.manual_seed(0)
+    b = adversary.perturb(data, label_or_guide)
+    assert torch_allclose(a, b)
+
+
+@pytest.mark.parametrize("att_cls", vec_eps_attacks)
+def test_vec_eps_consistent(att_cls):
+    _run_vec_eps_consistent(vecdata, veclabel, vecmodel, att_cls)
 
 
 if __name__ == '__main__':

@@ -14,6 +14,7 @@ import torch.nn as nn
 
 from advertorch.utils import clamp
 from advertorch.utils import normalize_by_pnorm
+from advertorch.utils import batch_multiply
 
 from .base import Attack
 from .base import LabelMixin
@@ -68,7 +69,7 @@ class GradientSignAttack(Attack, LabelMixin):
         loss.backward()
         grad_sign = xadv.grad.detach().sign()
 
-        xadv = xadv + self.eps * grad_sign
+        xadv = xadv + batch_multiply(self.eps, grad_sign)
 
         xadv = clamp(xadv, self.clip_min, self.clip_max)
 
@@ -125,7 +126,7 @@ class GradientAttack(Attack, LabelMixin):
             loss = -loss
         loss.backward()
         grad = normalize_by_pnorm(xadv.grad)
-        xadv = xadv + self.eps * grad
+        xadv = xadv + batch_multiply(self.eps, grad)
         xadv = clamp(xadv, self.clip_min, self.clip_max)
 
         return xadv.detach()
