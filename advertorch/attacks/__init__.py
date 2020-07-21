@@ -39,6 +39,7 @@ from .localsearch import SinglePixelAttack
 from .localsearch import LocalSearchAttack
 
 from .spatial import SpatialTransformAttack
+from .spatial2 import SpatialTransformAttack2
 
 from .jsma import JacobianSaliencyMapAttack
 from .jsma import JSMA

@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from advertorch.attacks import LocalSearchAttack
 from advertorch.attacks import SinglePixelAttack
 from advertorch.attacks import SpatialTransformAttack
+from advertorch.attacks import SpatialTransformAttack2
 from advertorch.attacks import JacobianSaliencyMapAttack
 from advertorch.attacks import LBFGSAttack
 from advertorch.attacks import CarliniWagnerL2Attack
@@ -243,6 +244,7 @@ general_input_attacks = [
 
 image_only_attacks = [
     SpatialTransformAttack,
+    SpatialTransformAttack2,
     LocalSearchAttack,
 ]
 
@@ -258,6 +260,7 @@ label_attacks = [
     LBFGSAttack,
     JacobianSaliencyMapAttack,
     SpatialTransformAttack,
+    SpatialTransformAttack2,
     DDNL2Attack,
     SparseL1DescentAttack,
     L1PGDAttack,

@@ -21,6 +21,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
 from advertorch.test_utils import LeNet5
+from advertorch_examples.model_resnet import ResNet18
 
 # TODO: need to refactor path to keep a single copy of file
 
@@ -71,25 +72,40 @@ def get_cifar10_test_loader(batch_size, shuffle=False):
     return loader
 
 
-def get_mnist_lenet5_clntrained():
+def get_mnist_lenet5_clntrained(device='cuda'):
     filename = "mnist_lenet5_clntrained.pt"
-    model = LeNet5()
+    model = LeNet5().to(device)
     model.load_state_dict(
-        torch.load(os.path.join(TRAINED_MODEL_PATH, filename)))
+        torch.load(os.path.join(TRAINED_MODEL_PATH, filename),
+                   map_location=torch.device(device)))
     model.eval()
     model.name = "MNIST LeNet5 standard training"
     # TODO: also described where can you find this model, and how is it trained
     return model
 
 
-def get_mnist_lenet5_advtrained():
+def get_mnist_lenet5_advtrained(device='cuda'):
     filename = "mnist_lenet5_advtrained.pt"
-    model = LeNet5()
+    model = LeNet5().to(device)
     model.load_state_dict(
-        torch.load(os.path.join(TRAINED_MODEL_PATH, filename)))
+        torch.load(os.path.join(TRAINED_MODEL_PATH, filename),
+                   map_location=torch.device(device)))
     model.eval()
+    model = model.to(device)
     model.name = "MNIST LeNet 5 PGD training according to Madry et al. 2018"
     # TODO: also described where can you find this model, and how is it trained
+    return model
+
+
+def get_cifar10_resnet18_clntrained(device='cuda'):
+    filename = "cifar10_resnet18_clntrained.pt"
+    model = ResNet18()
+    model.load_state_dict(
+        torch.load(os.path.join(TRAINED_MODEL_PATH, filename),
+                   map_location=torch.device(device)))
+    model.eval()
+    model = model.to(device)
+    model.name = "CIFAR10 ResNet18 standard training"
     return model
 
 
