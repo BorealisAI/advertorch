@@ -37,7 +37,7 @@ class DeepfoolLinfAttack(Attack):
     """
 
     def __init__(
-      self, predict, num_classes=None, nb_iter=50, eps=0.1,
+      self, predict, num_classes=None, nb_iter=50, eps=0.1, random_class=False,
       overshoot=0.02, clip_min=0., clip_max=1.):
         """
         Deepfool Linf Attack implementation in pytorch.
@@ -50,6 +50,7 @@ class DeepfoolLinfAttack(Attack):
         self.num_classes = num_classes
         self.nb_iter = nb_iter
         self.eps = eps
+        self.random_class = random_class
         self.overshoot = overshoot
 
     def is_adv(self, logits, y):  # =criterion
@@ -111,10 +112,16 @@ class DeepfoolLinfAttack(Attack):
 
         # get the classes
         classes = logits.argsort(axis=-1).flip(-1).detach()
-        if self.num_classes is None:
-            self.num_classes = logits.shape[-1]
+        if self.random_class:
+            rand_classes = torch.zeros((x.shape[0],), dtype=classes.dtype, device=x.device).random_(1, self.num_classes).view(-1, 1)
+            torch.cat((classes[:, 0].view(-1, 1),
+                       torch.gather(classes, dim=1, index=rand_classes)), dim=-1)
+            self.num_classes = 2
         else:
-            self.num_classes = min(self.num_classes, logits.shape[-1])
+            if self.num_classes is None:
+                self.num_classes = logits.shape[-1]
+            else:
+                self.num_classes = min(self.num_classes, logits.shape[-1])
 
         N = len(x)
         rows = range(N)
