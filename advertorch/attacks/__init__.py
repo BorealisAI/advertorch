@@ -32,6 +32,7 @@ from .carlini_wagner import CarliniWagnerL2Attack
 from .ead import ElasticNetL1Attack
 
 from .decoupled_direction_norm import DDNL2Attack
+from .deepfool import DeepfoolLinfAttack
 
 from .lbfgs import LBFGSAttack
 
