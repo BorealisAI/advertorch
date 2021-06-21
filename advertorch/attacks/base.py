@@ -25,10 +25,12 @@ class Attack(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, predict, loss_fn, clip_min, clip_max):
+    def __init__(self, predict, predict_extra, loss_fn, loss_fn_extra, clip_min, clip_max):
         """Create an Attack instance."""
         self.predict = predict
+        self.predict_extra = predict_extra
         self.loss_fn = loss_fn
+        self.loss_fn_extra = loss_fn_extra
         self.clip_min = clip_min
         self.clip_max = clip_max
 

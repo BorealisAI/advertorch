@@ -30,7 +30,7 @@ from .utils import rand_init_delta
 
 
 def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
-                      delta_init=None, minimize=False, ord=np.inf,
+                      loss_fn_extra=None, predict_extra=None, delta_init=None, minimize=False, ord=np.inf,
                       clip_min=0.0, clip_max=1.0,
                       l1_sparsity=None):
     """
@@ -64,6 +64,9 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
     for ii in range(nb_iter):
         outputs = predict(xvar + delta)
         loss = loss_fn(outputs, yvar)
+        if predict_extra is not None: 
+            outputs_extra = predict_extra(xvar + delta)
+            loss = loss + loss_fn_extra(outputs_extra, yvar)
         if minimize:
             loss = -loss
 
@@ -137,7 +140,7 @@ class PGDAttack(Attack, LabelMixin):
     """
 
     def __init__(
-            self, predict, loss_fn=None, eps=0.3, nb_iter=40,
+            self, predict, predict_extra=None, loss_fn=None, loss_fn_extra=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
             ord=np.inf, l1_sparsity=None, targeted=False):
         """
@@ -145,7 +148,7 @@ class PGDAttack(Attack, LabelMixin):
 
         """
         super(PGDAttack, self).__init__(
-            predict, loss_fn, clip_min, clip_max)
+            predict, predict_extra, loss_fn, loss_fn_extra, clip_min, clip_max)
         self.eps = eps
         self.nb_iter = nb_iter
         self.eps_iter = eps_iter
@@ -183,8 +186,8 @@ class PGDAttack(Attack, LabelMixin):
         rval = perturb_iterative(
             x, y, self.predict, nb_iter=self.nb_iter,
             eps=self.eps, eps_iter=self.eps_iter,
-            loss_fn=self.loss_fn, minimize=self.targeted,
-            ord=self.ord, clip_min=self.clip_min,
+            loss_fn=self.loss_fn, loss_fn_extra=self.loss_fn_extra, predict_extra=self.predict_extra, 
+            minimize=self.targeted, ord=self.ord, clip_min=self.clip_min,
             clip_max=self.clip_max, delta_init=delta,
             l1_sparsity=self.l1_sparsity,
         )
@@ -208,12 +211,12 @@ class LinfPGDAttack(PGDAttack):
     """
 
     def __init__(
-            self, predict, loss_fn=None, eps=0.3, nb_iter=40,
+            self, predict, predict_extra=None, loss_fn=None, loss_fn_extra=None, eps=0.3, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
             targeted=False):
         ord = np.inf
         super(LinfPGDAttack, self).__init__(
-            predict=predict, loss_fn=loss_fn, eps=eps, nb_iter=nb_iter,
+            predict=predict, predict_extra=predict_extra, loss_fn=loss_fn, loss_fn_extra=loss_fn_extra, eps=eps, nb_iter=nb_iter,
             eps_iter=eps_iter, rand_init=rand_init, clip_min=clip_min,
             clip_max=clip_max, targeted=targeted,
             ord=ord)
