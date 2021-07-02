@@ -5,6 +5,7 @@
 *.tar
 *.png
 .ipynb_checkpoints/
+.idea/
 __pycache__/
 *.pdf
 *.npz
