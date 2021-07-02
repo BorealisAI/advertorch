@@ -32,7 +32,6 @@ class FloatToIntSqueezing(torch.autograd.Function):
             "backward not implemented", FloatToIntSqueezing)
 
 
-
 class JPEGEncodingDecoding(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, quality):

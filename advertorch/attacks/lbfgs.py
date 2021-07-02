@@ -19,7 +19,6 @@ from advertorch.utils import calc_l2distsq
 from .base import Attack
 from .base import LabelMixin
 
-
 L2DIST_UPPER = 1e10
 COEFF_UPPER = 1e10
 INVALID_LABEL = -1
@@ -58,7 +57,6 @@ class LBFGSAttack(Attack, LabelMixin):
         self.initial_const = initial_const
         self.targeted = targeted
 
-
     def _update_if_better(
             self, adv_img, labs, output, dist, batch_size,
             final_l2dists, final_labels, final_advs):
@@ -73,7 +71,6 @@ class LBFGSAttack(Attack, LabelMixin):
                 final_labels[ii] = output_label
                 final_advs[ii] = adv_img[ii]
 
-
     def _update_loss_coeffs(
             self, labs, batch_size,
             loss_coeffs, coeff_upper_bound, coeff_lower_bound, output):
@@ -85,16 +82,15 @@ class LBFGSAttack(Attack, LabelMixin):
 
                 if coeff_upper_bound[ii] < UPPER_CHECK:
                     loss_coeffs[ii] = (
-                        coeff_lower_bound[ii] + coeff_upper_bound[ii]) / 2
+                                              coeff_lower_bound[ii] + coeff_upper_bound[ii]) / 2
             else:
                 coeff_lower_bound[ii] = max(
                     coeff_lower_bound[ii], loss_coeffs[ii])
                 if coeff_upper_bound[ii] < UPPER_CHECK:
                     loss_coeffs[ii] = (
-                        coeff_lower_bound[ii] + coeff_upper_bound[ii]) / 2
+                                              coeff_lower_bound[ii] + coeff_upper_bound[ii]) / 2
                 else:
                     loss_coeffs[ii] *= 10
-
 
     def perturb(self, x, y=None):
 

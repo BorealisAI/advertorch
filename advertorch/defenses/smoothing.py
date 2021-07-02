@@ -35,12 +35,11 @@ class MedianSmoothing2D(Processor):
         else:
             self.padding = _quadruple(padding)
 
-
     def forward(self, x):
         x = F.pad(x, pad=self.padding, mode="reflect")
         x = x.unfold(2, self.kernel_size, self.stride)
         x = x.unfold(3, self.kernel_size, self.stride)
-        x = x.contiguous().view(x.shape[:4] + (-1, )).median(dim=-1)[0]
+        x = x.contiguous().view(x.shape[:4] + (-1,)).median(dim=-1)[0]
         return x
 
 
@@ -83,7 +82,7 @@ class AverageSmoothing2D(ConvSmoothing2D):
 
     def __init__(self, channels, kernel_size):
         kernel = torch.ones((channels, 1, kernel_size, kernel_size)) / (
-            kernel_size * kernel_size)
+                kernel_size * kernel_size)
         super(AverageSmoothing2D, self).__init__(kernel)
 
 
@@ -106,7 +105,6 @@ def _generate_conv2d_from_smoothing_kernel(kernel):
 
 
 def _generate_gaussian_kernel(sigma, channels, kernel_size=None):
-
     if kernel_size is None:
         kernel_size = _round_to_odd(2 * 2 * sigma)
 
@@ -117,8 +115,8 @@ def _generate_gaussian_kernel(sigma, channels, kernel_size=None):
     var = sigma ** 2
 
     gaussian_kernel = (
-        1. / (2. * math.pi * var) *
-        torch.exp(-(gridxy - mean).pow(2).sum(dim=0) / (2 * var))
+            1. / (2. * math.pi * var) *
+            torch.exp(-(gridxy - mean).pow(2).sum(dim=0) / (2 * var))
     )
 
     gaussian_kernel /= torch.sum(gaussian_kernel)

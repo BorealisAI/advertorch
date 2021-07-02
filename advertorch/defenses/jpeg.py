@@ -21,4 +21,4 @@ class JPEGFilter(Processor):
         self.quality = quality
 
     def forward(self, x):
-        return JPEGEncodingDecoding.apply(x, self.quality)
+        return JPEGEncodingDecoding.apply(x, self.quality).to(x.device)
