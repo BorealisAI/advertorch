@@ -54,6 +54,7 @@ def _check_param(param, x, name):
 
     return new_param
 
+#https://github.com/MadryLab/blackbox-bandits/blob/master/src/main.py
 class BanditAttack(Attack, LabelMixin):
     def __init__(
             self, predict, eps: float, 
@@ -155,65 +156,4 @@ class BanditAttack(Attack, LabelMixin):
         return prior
         
 
-#https://github.com/MadryLab/blackbox-bandits/blob/master/src/main.py
-class BanditWrapper(GradientWrapper):
-    def __init__(self, func, fd_eta, exploration, online_lr, order):
-        super().__init__(func)
 
-        self.fd_eta = fd_eta
-        self.exploration = exploration
-        self.online_lr = online_lr
-        self.prior_step = gd_prior_step if order == 'l2' else eg_step
-
-        #The trouble with this is that it adapts to a batch size
-        self.register_buffer('prior', None)
-
-    def estimate_grad(self, x):
-        #sample using mean param
-        #possibly, this would mean NESWrapper has a normal distribution
-        #as a param
-        
-        #TODO: (1) adapt for multiple outputs
-        #TODO: (2) test
-        #TODO: (3) figure out better way of "storing" prior?
-        # ... BANDIT IS NOT A TYPE OF GRADIENT ESTIMATOR
-        # ... there is a dual optimization problem
-
-        
-        #if so, we could just use the same estimate grad
-        ndim = np.prod(list(x.shape[1:]))
-        #The idea of this is that the gradient becomes more accurate as we
-        #call it multiple times.
-        #This gradient is learnt in an online fashion.
-        if self.prior is None:
-            self.prior = torch.zeros_like(x)
-        else:
-            assert x.shape == prior.shape
-
-        #before: # [nbatch, ndim, nsamples]
-        #now: # [nbatch, ndim]
-        exp_noise = exploration * torch.randn_like(prior)/(ndim**0.5)
-        
-        # Query deltas for finite difference estimator
-        ##...this step needs to change
-        q1 = (self.prior + exp_noise)
-        q2 = (self.prior - exp_noise)
-        # Loss points for finite difference estimator
-        f1 = self.func(x + fd_eta*q1/norm(q1)) # L(prior + c*noise)
-        f2 = self.func(x + fd_eta*q2/norm(q2)) # L(prior - c*noise)
-
-        delta_f = (f1 - f2)/(fd_eta * exploration) #[nbatch, noutput, nsamples]
-
-        #gx_s = (fxp - fxm) / (2.0 * self.fd_eta) #[nbatch, noutput, nsamples]
-        #self.prior --> 
-        
-        grad_est = delta_f[:, :, None] * exp_noise[:, None, :]
-
-        self.prior = self.prior_step(self.prior, grad_est, self.online_lr)
-
-        return self.prior
-
-    def reset_grads(self):
-        #TODO: should this be triggered by "zero_grad?"
-        #Answer: NO
-        self.prior = None
