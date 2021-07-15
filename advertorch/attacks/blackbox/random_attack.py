@@ -64,6 +64,6 @@ class RandAttack(BlackBoxAttack):
         sgn_t = sign(ch.rand(_shape[0], dim) - 0.5)
 
         # perform the step
-        new_xs = lp_step(self.xo_t, sgn_t.view(_shape), self.eps, self.p)
+        new_xs = lp_step(self.xo_t, sgn_t.view(_shape), self.eps[:, None], self.p)
         return new_xs, np.ones(_shape[0])
 
