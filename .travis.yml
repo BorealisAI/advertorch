@@ -11,6 +11,7 @@ before_install:
     - travis_wait travis_retry pip install Keras==2.2.2
     - travis_wait travis_retry pip install git+https://github.com/tensorflow/cleverhans.git@336b9f4ed95dccc7f0d12d338c2038c53786ab70
     - travis_wait travis_retry pip install --upgrade pytest
+    - travis_wait travis_retry pip install pytest-cov
     - travis_wait travis_retry pip install codecov
 install:
     - pip install -e .
