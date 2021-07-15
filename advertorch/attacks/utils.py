@@ -144,7 +144,7 @@ def multiple_mini_batch_attack(
             break
 
     return torch.cat(lst_label), torch.cat(lst_pred), torch.cat(lst_advpred), \
-           torch.cat(lst_dist) if norm is not None else None
+        torch.cat(lst_dist) if norm is not None else None
 
 
 class MarginalLoss(_Loss):
@@ -222,4 +222,4 @@ def attack_whole_dataset(adversary, loader, device="cuda"):
         lst_advpred.append(advpred)
         lst_adv.append(adv)
     return torch.cat(lst_adv), torch.cat(lst_label), torch.cat(lst_pred), \
-           torch.cat(lst_advpred)
+        torch.cat(lst_advpred)
