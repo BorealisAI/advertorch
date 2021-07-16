@@ -95,7 +95,7 @@ attack_kwargs = {
     LinfFABAttack: {"n_iter": 5},
     L2FABAttack: {"n_iter": 5},
     L1FABAttack: {"n_iter": 5},
-    DeepfoolLinfAttack: {"n_iter": 5},
+    DeepfoolLinfAttack: {"nb_iter": 5},
 }
 
 

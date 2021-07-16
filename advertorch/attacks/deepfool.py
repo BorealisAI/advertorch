@@ -17,11 +17,11 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import torch as torch
-from .base import Attack
+from .base import Attack, LabelMixin
 from advertorch.utils import replicate_input, replicate_input_withgrad
 
 
-class DeepfoolLinfAttack(Attack):
+class DeepfoolLinfAttack(Attack, LabelMixin):
     """
     A simple and fast gradient-based adversarial attack.
     Seyed-Mohsen Moosavi-Dezfooli, Alhussein Fawzi, Pascal Frossard,
@@ -38,12 +38,13 @@ class DeepfoolLinfAttack(Attack):
 
     def __init__(
       self, predict, num_classes=None, nb_iter=50, eps=0.1,
-      overshoot=0.02, clip_min=0., clip_max=1.):
+      overshoot=0.02, clip_min=0., clip_max=1., loss_fn=None,
+      targeted=False,):
         """
         Deepfool Linf Attack implementation in pytorch.
         """
 
-        super(DeepfoolLinfAttack, self).__init__(predict, loss_fn=None,
+        super(DeepfoolLinfAttack, self).__init__(predict, loss_fn=loss_fn,
                                                  clip_min=clip_min, clip_max=clip_max)
 
         self.predict = predict
@@ -51,6 +52,7 @@ class DeepfoolLinfAttack(Attack):
         self.nb_iter = nb_iter
         self.eps = eps
         self.overshoot = overshoot
+        self.targeted = targeted
 
     def is_adv(self, logits, y):  # =criterion
         y_hat = logits.argmax(-1)
@@ -91,6 +93,13 @@ class DeepfoolLinfAttack(Attack):
         return x.reshape(shape)
 
     def _verify_and_process_inputs(self, x, y):
+        if self.targeted:
+            assert y is not None
+
+        if not self.targeted:
+            if y is None:
+                y = self._get_predicted_label(x)
+
         x = replicate_input_withgrad(x)
         y = replicate_input(y)
         return x, y
