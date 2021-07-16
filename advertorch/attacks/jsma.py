@@ -10,7 +10,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-
 import numpy as np
 import torch
 
@@ -46,7 +45,6 @@ class JacobianSaliencyMapAttack(Attack, LabelMixin):
         self.comply_cleverhans = comply_cleverhans
         self.targeted = True
 
-
     def _compute_forward_derivative(self, xadv, y):
         jacobians = torch.stack([jacobian(self.predict, xadv, yadv)
                                  for yadv in range(self.num_classes)])
@@ -54,7 +52,6 @@ class JacobianSaliencyMapAttack(Attack, LabelMixin):
         grads_target = grads[y, range(len(y)), :]
         grads_other = grads.sum(dim=0) - grads_target
         return grads_target, grads_other
-
 
     def _sum_pair(self, grads, dim_x):
         return grads.view(-1, dim_x, 1) + grads.view(-1, 1, dim_x)
@@ -72,11 +69,11 @@ class JacobianSaliencyMapAttack(Attack, LabelMixin):
         gradsum_other = self._sum_pair(grads_other, dim_x)
 
         if self.theta > 0:
-            scores_mask = (
-                torch.gt(gradsum_target, 0) & torch.lt(gradsum_other, 0))
+            scores_mask = (torch.gt(gradsum_target, 0) &
+                           torch.lt(gradsum_other, 0))
         else:
-            scores_mask = (
-                torch.lt(gradsum_target, 0) & torch.gt(gradsum_other, 0))
+            scores_mask = (torch.lt(gradsum_target, 0) &
+                           torch.gt(gradsum_other, 0))
 
         scores_mask &= self._and_pair(search_space.ne(0), dim_x)
         scores_mask[:, range(dim_x), range(dim_x)] = 0
@@ -121,7 +118,6 @@ class JacobianSaliencyMapAttack(Attack, LabelMixin):
 
         # Algorithm 1
         while ((y != yadv).any() and curr_step < max_iters):
-
             grads_target, grads_other = self._compute_forward_derivative(
                 xadv, y)
 

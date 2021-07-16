@@ -17,7 +17,7 @@ import torch
 from .base import Attack
 from .base import LabelMixin
 from .utils import MarginalLoss
-from ..utils import is_float_or_torch_tensor
+from ..utils import is_float_or_torch_tensor, batch_clamp, clamp
 
 __all__ = ['LinfSPSAAttack', 'spsa_grad', 'spsa_perturb']
 
@@ -37,8 +37,8 @@ def linf_clamp_(dx, x, eps, clip_min, clip_max):
     :return: the clamped perturbation `dx`.
     """
 
-    dx_clamped = torch.clamp(dx, -eps, eps)
-    x_adv = torch.clamp(x + dx_clamped, clip_min, clip_max)
+    dx_clamped = batch_clamp(eps, dx)
+    x_adv = clamp(x + dx_clamped, clip_min, clip_max)
     # `dx` is changed *inplace* so the optimizer will keep
     # tracking it. the simplest mechanism for inplace was
     # adding the difference between the new value `x_adv - x`

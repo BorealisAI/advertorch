@@ -27,6 +27,12 @@ from advertorch.loss import ZeroOneLoss
 from advertorch.attacks import Attack, LabelMixin
 
 
+def zero_gradients(x):
+    if isinstance(x, torch.Tensor):
+        if x.grad is not None:
+            x.grad.detach_()
+            x.grad.zero_()
+
 
 def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
     # TODO: Currently only considered one way of "uniform" sampling
@@ -119,7 +125,6 @@ def multiple_mini_batch_attack(
             return _get_norm_batch(x - y, norm)
     else:
         assert norm is None
-
 
     idx_batch = 0
 

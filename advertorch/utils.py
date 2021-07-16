@@ -222,6 +222,8 @@ def batch_l1_proj_flat(x, z=1):
 
     # Getting the elements to project in the batch
     indexes_b = torch.nonzero(v > z).view(-1)
+    if isinstance(z, torch.Tensor):
+        z = z[indexes_b][:, None]
     x_b = x[indexes_b]
     batch_size_b = x_b.size(0)
 
@@ -236,7 +238,10 @@ def batch_l1_proj_flat(x, z=1):
     vv = torch.arange(view_size).float().to(x.device)
     st = (mu.cumsum(1) - z) / (vv + 1)
     u = (mu - st) > 0
-    rho = (1 - u).cumsum(dim=1).eq(0).sum(1) - 1
+    if u.dtype.__str__() == "torch.bool":  # after and including torch 1.2
+        rho = (~u).cumsum(dim=1).eq(0).sum(1) - 1
+    else:  # before and including torch 1.1
+        rho = (1 - u).cumsum(dim=1).eq(0).sum(1) - 1
     theta = st.gather(1, rho.unsqueeze(1))
     proj_x_b = _thresh_by_magnitude(theta, x_b)
 

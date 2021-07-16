@@ -25,7 +25,6 @@ from .base import Attack
 from .base import LabelMixin
 from .utils import is_successful
 
-
 CARLINI_L2DIST_UPPER = 1e10
 CARLINI_COEFF_UPPER = 1e10
 INVALID_LABEL = -1
@@ -126,7 +125,6 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
 
         return is_successful(pred, label, self.targeted)
 
-
     def _forward_and_update_delta(
             self, optimizer, x_atanh, delta, y_onehot, loss_coeffs):
 
@@ -140,7 +138,6 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
         optimizer.step()
 
         return loss.item(), l2distsq.data, output.data, adv.data
-
 
     def _get_arctanh_x(self, x):
         result = clamp((x - self.clip_min) / (self.clip_max - self.clip_min),
@@ -181,17 +178,16 @@ class CarliniWagnerL2Attack(Attack, LabelMixin):
                     coeff_upper_bound[ii], loss_coeffs[ii])
 
                 if coeff_upper_bound[ii] < UPPER_CHECK:
-                    loss_coeffs[ii] = (
-                        coeff_lower_bound[ii] + coeff_upper_bound[ii]) / 2
+                    loss_coeffs[ii] = (coeff_lower_bound[ii] +
+                                       coeff_upper_bound[ii]) / 2
             else:
                 coeff_lower_bound[ii] = max(
                     coeff_lower_bound[ii], loss_coeffs[ii])
                 if coeff_upper_bound[ii] < UPPER_CHECK:
-                    loss_coeffs[ii] = (
-                        coeff_lower_bound[ii] + coeff_upper_bound[ii]) / 2
+                    loss_coeffs[ii] = (coeff_lower_bound[ii] +
+                                       coeff_upper_bound[ii]) / 2
                 else:
                     loss_coeffs[ii] *= 10
-
 
     def perturb(self, x, y=None):
         x, y = self._verify_and_process_inputs(x, y)

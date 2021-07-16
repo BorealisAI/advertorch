@@ -35,12 +35,11 @@ class MedianSmoothing2D(Processor):
         else:
             self.padding = _quadruple(padding)
 
-
     def forward(self, x):
         x = F.pad(x, pad=self.padding, mode="reflect")
         x = x.unfold(2, self.kernel_size, self.stride)
         x = x.unfold(3, self.kernel_size, self.stride)
-        x = x.contiguous().view(x.shape[:4] + (-1, )).median(dim=-1)[0]
+        x = x.contiguous().view(x.shape[:4] + (-1,)).median(dim=-1)[0]
         return x
 
 
@@ -106,7 +105,6 @@ def _generate_conv2d_from_smoothing_kernel(kernel):
 
 
 def _generate_gaussian_kernel(sigma, channels, kernel_size=None):
-
     if kernel_size is None:
         kernel_size = _round_to_odd(2 * 2 * sigma)
 

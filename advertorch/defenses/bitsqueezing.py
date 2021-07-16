@@ -27,7 +27,6 @@ class BitSqueezing(Processor):
         self.vmin = vmin
         self.vmax = vmax
 
-
     def forward(self, x):
         return FloatToIntSqueezing.apply(
             x, self.max_int, self.vmin, self.vmax)
