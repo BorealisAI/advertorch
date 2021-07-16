@@ -36,16 +36,16 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
     :param clip_max: maximum value per input dimension.
     """
 
-    def __init__(
-      self, predict, num_classes=None, nb_iter=50, eps=0.1,
-      overshoot=0.02, clip_min=0., clip_max=1., loss_fn=None,
-      targeted=False,):
+    def __init__(self, predict, num_classes=None, nb_iter=50, eps=0.1,
+                 overshoot=0.02, clip_min=0., clip_max=1., loss_fn=None,
+                 targeted=False):
         """
         Deepfool Linf Attack implementation in pytorch.
         """
 
         super(DeepfoolLinfAttack, self).__init__(predict, loss_fn=loss_fn,
-                                                 clip_min=clip_min, clip_max=clip_max)
+                                                 clip_min=clip_min,
+                                                 clip_max=clip_max)
 
         self.predict = predict
         self.num_classes = num_classes
@@ -82,8 +82,9 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
         return deltas_logits
 
     def get_distances(self, deltas, grads):  # =get_distances
+        # foolbox code uses start_dim=2 why??
         return abs(deltas) / (
-              grads.flatten(start_dim=2, end_dim=-1).abs().sum(axis=-1) + 1e-8)  # foolbox code uses start_dim=2 why??
+            grads.flatten(start_dim=2, end_dim=-1).abs().sum(axis=-1) + 1e-8)
 
     def get_perturbations(self, distances, grads):  # =get_perturbations
         return self.atleast_kd(distances, grads.ndim) * grads.sign()
@@ -138,7 +139,7 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
             if is_adv.all():
                 break
 
-            diffs += [self.get_grads(x, k, classes) for k in range(2, self.num_classes)]
+            diffs += [self.get_grads(x, k, classes) for k in range(2, self.num_classes)] # noqa
 
             deltas = torch.stack([d['deltas'] for d in diffs], dim=-1)
             grads = torch.stack([d['grads'] for d in diffs], dim=1)
@@ -146,7 +147,8 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
             assert grads.shape == (N, self.num_classes - 1) + x0.shape[1:]
 
             # calculate the distances
-            distances = self.get_distances(deltas, grads)  # compute f_k / ||w_k||
+            # compute f_k / ||w_k||
+            distances = self.get_distances(deltas, grads)
             assert distances.shape == (N, self.num_classes - 1)
 
             # determine the best directions
@@ -167,9 +169,10 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
             p_total = p_total.clamp_(-self.eps, self.eps)
             # don't do anything for those that are already adversarial
             x = torch.where(
-              self.atleast_kd(is_adv, x.ndim), x, x0 + (1.0 + self.overshoot) * p_total
+                self.atleast_kd(is_adv, x.ndim),
+                x,
+                x0 + (1.0 + self.overshoot) * p_total,
             )  # =x_{i+1}
-            x = x.clamp_(self.clip_min, self.clip_max).clone().detach().requires_grad_()
+            x = x.clamp_(self.clip_min, self.clip_max).clone().detach().requires_grad_() # noqa
 
         return x.detach()
-
