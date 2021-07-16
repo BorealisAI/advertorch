@@ -10,6 +10,8 @@ from tqdm import tqdm
 from advertorch.attacks.base import Attack
 from advertorch.attacks.base import LabelMixin
 
+from .utils import _check_param
+
 def eg_step(x, g, lr):
     real_x = (x + 1)/2 # from [-1, 1] to [0, 1]
     pos = real_x*torch.exp(lr*g)
@@ -39,20 +41,10 @@ def l2_proj(image, eps):
 def linf_proj(image, eps):
     orig = image.clone()
     def proj(new_x):
-        return orig + ch.clamp(new_x - orig, -eps, eps)
+        return orig + torch.clamp(new_x - orig, -eps, eps)
     return proj
 
-def _check_param(param, x, name):
-    if isinstance(param, float):
-        new_param = param * torch.ones_like(x)
-    elif isinstance(param, (np.ndarray, list)):
-        new_param = torch.FloatTensor(param).to(x.device)  # type: ignore
-    elif isinstance(param, torch.Tensor):
-        new_param = param.to(x.device)  # type: ignore
-    else:
-        raise ValueError("Unknown format for {}".format(name))
 
-    return new_param
 
 #https://github.com/MadryLab/blackbox-bandits/blob/master/src/main.py
 class BanditAttack(Attack, LabelMixin):
@@ -119,7 +111,7 @@ class BanditAttack(Attack, LabelMixin):
             loss = self.loss_fn(output, y)
             return loss
 
-        proj_step = self.proj_maker(x, self.eps)
+        proj_step = self.proj_maker(x, eps)
         
         #if so, we could just use the same estimate grad
         ndim = np.prod(list(x.shape[1:]))

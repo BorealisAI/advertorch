@@ -26,6 +26,9 @@ from tqdm import tqdm
 
 from .compute_fcts import l2_proj_maker, linf_proj_maker
 
+
+from .utils import _check_param
+
 #TODO:
 #This is not blackbox attack, but random attack?
 #Or, is there a random attack that inherits from blackbox
@@ -263,37 +266,11 @@ class BlackBoxAttack(Attack, LabelMixin):
 
         loss_fct = partial(self._loss_fct, y=y.cpu().numpy())
         early_stop_crit_fct = partial(self._early_stop_crit_fct, y=y.cpu().numpy())
-        self.device = y.device
+        self.device = y=x.device
 
-        if torch.is_tensor(self.eps):
-            if len(self.eps) != len(y):
-                raise ValueError("eps should have the same length as x.")
-            self.eps = self.eps
-        elif isinstance(self.eps, float):
-            self.eps = torch.Tensor([self.eps] * len(y)).to(self.device)
-        else:
-            raise ValueError("eps should be float or Tensor.")
-
-        #lb, ub = self._get_clip_bounds(X, self.eps)
-        if isinstance(self.clip_min, float):
-            clip_min = self.clip_min * torch.ones_like(x)
-        elif isinstance(self.clip_min, (np.ndarray, list)):
-            clip_min = torch.FloatTensor(self.clip_min).to(x.device)  # type: ignore
-        elif isinstance(self.clip_min, torch.Tensor):
-            clip_min = self.clip_min.to(x.device)  # type: ignore
-
-        else:
-            raise ValueError("Unknown clip_min format.")
-
-        if isinstance(self.clip_max, float):
-            clip_max = self.clip_max * torch.ones_like(x)
-        elif isinstance(self.clip_max, (np.ndarray, list)):
-            clip_max = torch.FloatTensor(self.clip_max).to(x.device)  # type: ignore
-        elif isinstance(self.clip_max, torch.Tensor):
-            clip_max = self.clip_max.to(x.device)  # type: ignore
-
-        else:
-            raise ValueError("Unknown clip_max format.")
+        self.eps = _check_param(self.eps, x.new_full((x.shape[0], )), 1, 'eps')
+        clip_min = _check_param(self.clip_min, x, 'clip_min')
+        clip_max = _check_param(self.clip_max, x, 'clip_max')
 
         return self._run(
             x, loss_fct, early_stop_crit_fct, clip_min, clip_max
