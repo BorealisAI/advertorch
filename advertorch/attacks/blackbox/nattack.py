@@ -165,7 +165,7 @@ class NAttack(Attack, LabelMixin):
         n_batch, n_dim = x.shape
 
         #[B]
-        eps = _check_param(self.eps, x.new_full((x.shape[0],) , 1), 'eps')
+        eps = _check_param(self.eps, x.new_full((x.shape[0],), 1), 'eps')
         #[B, F]
         clip_min = _check_param(self.clip_min, x, 'clip_min')
         clip_max = _check_param(self.clip_max, x, 'clip_max')

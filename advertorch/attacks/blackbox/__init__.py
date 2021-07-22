@@ -8,3 +8,4 @@ from .grad_estimators import GradientWrapper
 from .grad_estimators import FDWrapper, NESWrapper
 
 from .nattack import NAttack
+from .iterative_projected_gradient import BanditAttack
