@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from advertorch.attacks.base import Attack
 from advertorch.attacks.base import LabelMixin
+from advertorch.utils import clamp
 
 from .utils import _check_param
 
@@ -47,7 +48,9 @@ def l2_proj(image, eps):
 def linf_proj(image, eps):
     orig = image.clone()
     def proj(new_x):
-        return orig + torch.clamp(new_x - orig, -eps, eps)
+        delta = torch.minimum(new_x - orig, eps[:, None])
+        delta = torch.maximum(delta, -eps[:, None])
+        return orig + delta
     return proj
 
 
