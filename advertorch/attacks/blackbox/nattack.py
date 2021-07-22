@@ -2,12 +2,15 @@ import numpy as np
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 from advertorch.attacks.base import Attack
 from advertorch.attacks.base import LabelMixin
 
 from .utils import _check_param
+
+from advertorch.utils import to_one_hot
 
 npop = 300     # population size
 sigma = 0.1    # noise standard deviation
@@ -51,24 +54,64 @@ def linf_proj(image, eps):
     return proj
 
 
-#cifar images have 3 channels (RGB) and are 32 x 32
+def sample_clamp(x, clip_min, clip_max):
+    new_x = torch.maximum(x, clip_min[:, None, :])
+    new_x = torch.minimum(new_x, clip_max[:, None, :])
+    return new_x
 
-#linf and l2 projections
 
-def loss_fn(outputs, y):
-    npop, n_class = outputs.shape
+def cw_log_loss(output, target, targeted=False, buff=1e-30):
+    """
+    :param outputs: pre-softmax/logits.
+    :param target: true labels.
+    :return: CW loss value.
+    """
+    num_classes = output.size(1)
+    label_mask = to_one_hot(target, num_classes=num_classes).float()
+    correct_logit = torch.log(torch.sum(label_mask * output, dim=1) + buff)
+    wrong_logit = torch.log(torch.max((1. - label_mask) * output, dim=1)[0] + buff)
 
-    target_onehot = torch.eye(n_class)[y]#.repeat(npop, 0)
+    if targeted:
+        loss = -0.5 * F.relu(wrong_logit - correct_logit + 50.)
+    else:
+        loss = -0.5 * F.relu(correct_logit - wrong_logit + 50.)
+    return loss
 
-    real = np.log((target_onehot * outputs).sum(1) + epsilon)
-    other = np.log(((1. - target_onehot) * outputs - target_onehot * 10000.).max(1)[0]+epsilon)
 
-    loss1 = np.clip(real - other, 0.,1000)
+def select_best_example(x_orig, x_adv, order, losses, success):
+    '''
+    Given a collection of potential adversarial examples, select the best,
+    according to either minimum input distortion or maximum output
+    distortion.
 
-    #loss1 = loss_fn(outputs, y)
+    Also, return if adversarial example found (to avoid continuing the search)
+    '''
 
-    #TODO: sign based on target or untarget
-    return -0.5 * loss1
+    #x_orig: [B, F]
+    #x_adv: [B, N, F]
+    #success: [B, N], 0/1 if sample succeded
+    #losses: [B, N]
+    #dists: [B, N]
+
+    if order == 'linf':
+        dists = abs(x_orig[:, None, :] - x_adv).max(-1).values
+    elif order == 'l2':
+        dists = torch.sqrt( ((x_orig[:, None, :] - x_adv) ** 2).sum(-1) )
+    else:
+        raise ValueError('unsupported metric {}'.format(order))
+
+    #[B, 1]
+    best_loss_ind = losses.argmin(-1)[:, None, None]
+    best_loss_ind = best_loss_ind.expand(-1, -1, x_adv.shape[-1])
+    #best_dist_ind = dists.argmin(-1)
+
+    #return x_adv[:, 0, :]
+    best_adv = torch.gather(x_adv, dim=1, index=best_loss_ind )
+    return best_adv.squeeze(1)
+    #return x_adv[:, best_loss_ind, :]
+
+#TODO: Make classes for Linf, L2, ...
+#TODO: accept custom losses
 
 class NAttack(Attack, LabelMixin):
     def __init__(
@@ -80,19 +123,39 @@ class NAttack(Attack, LabelMixin):
             sigma=0.1,
             clip_min=0., clip_max=1.,
             targeted : bool = False,
-            npop = 300
+            npop = 300,
+            query_limit = None
             ):
 
-        super().__init__(predict, loss_fn, clip_min, clip_max)
+        if loss_fn is not None:
+            import warnings
+            warnings.warn(
+                "This Attack currently do not support a different loss"
+                " function other than the default. Setting loss_fn manually"
+                " is not effective."
+            )
+
+        super().__init__(predict, cw_log_loss, clip_min, clip_max)
         self.eps = eps
-        self.targeted = targeted
+        self.order = order
+        self.nb_samples = nb_samples
         self.nb_iter = nb_iter
         self.eps_iter = eps_iter
-        self.nb_samples = nb_samples
-        self.order = order
+        self.sigma = sigma
+        self.targeted = targeted
         self.npop = npop
-
+        
         self.proj_maker = l2_proj if order == 'l2' else linf_proj
+
+        #If aiming for query efficiency, stop as soon as one adversarial
+        #example is found.  Set to False to continue iteration and find best
+        #adversarial example
+        self.query_limit = query_limit
+
+
+        #Reference:
+        #https://github.com/Cold-Winter/Nattack/blob/master/therm-adv/re_li_attack_notanh.py
+        #TODO: tanh?
 
     def perturb(self, x, y):
         #[B, F]
@@ -101,6 +164,7 @@ class NAttack(Attack, LabelMixin):
 
         n_batch, n_dim = x.shape
 
+        #[B]
         eps = _check_param(self.eps, x.new_full((x.shape[0],) , 1), 'eps')
         #[B, F]
         clip_min = _check_param(self.clip_min, x, 'clip_min')
@@ -108,83 +172,51 @@ class NAttack(Attack, LabelMixin):
 
         proj_step = self.proj_maker(x, eps)
 
-        #[B,F]
-        shift = (clip_max + clip_min) / 2.
-        scale = (clip_max - clip_min) / 2.
-
-        x_scaled = torch_arctanh((x - shift) / scale)
-        #TODO: shouldn't this be equal to x_scaled? Something to test
-        x_unscaled = np.tanh(x_scaled) * scale + shift
-
+        #TODO: check correspondence
         y_repeat = y.repeat(self.npop, 1).T.flatten()
 
-        #Fleet Foxes - the shrine/the argument
-
-        #predict
-        #mu_t = np.random.randn(ndim) * 0.001
-
         #[B,F]
-        mu_t = np.random.randn(n_batch, n_dim) * 0.001
+        mu_t = torch.FloatTensor(n_batch, n_dim).normal_() * 0.001
+        mu_t = mu_t.to(x.device)
 
         for _ in range(self.nb_iter):
             #Sample from N(0,I)
             #[B, N, F]
-            gauss_samples = np.random.randn(n_batch, self.npop, n_dim)
+            gauss_samples = torch.FloatTensor(n_batch, self.npop, n_dim).normal_()
+            gauss_samples = gauss_samples.to(x.device)
 
             #Compute gi = g(mu_t + sigma * samples)
             #[B, N, F]
-            mu_samples = mu_t[:, None, :] + sigma * gauss_samples
+            mu_samples = mu_t[:, None, :] + self.sigma * gauss_samples
 
+            #linf proj
             #[B, N, F]
-            adv = np.tanh(x_scaled[:, None, :] + mu_samples) * scale[:, None, :] + shift[:, None, :]
-
-
-            #projection step
-            #[B, N, F]
-            dist = adv - x_unscaled[:, None, :]
-            #[B, N, F]
-            clipdist = np.clip(dist, -epsi, epsi)
-            #[B, N, F]
-            adv = (clipdist + x_unscaled[:, None, :])
-
-            #x_decoded = decode_input(x)
-            #print('adv', adv,flush=True)
-
-            #[N, C, H, W]
-            #inputimg = np.tanh(adv + mu_samples) * scale + shift
-            #gi = encode_normal(x_decode + mu_samples)
-            #gi = encode_normal(mu_samples)
-
-            #linf proj OR l2_proj
-            #[N, C, H, W]
-            #delta = gi - encode_normal(x_decode)
-            #delta = gi - x
-
-            #x_adv = proj_step(gi)
-
-            #batch_clamp?
-            #x_adv = torch.clamp(x_adv, clip_min, clip_max)
-
-
-            #clipdist = np.clip(dist, -epsi, epsi)
-            #clipinput = clipdist + encode_normal(x_decode)
-
-            #clipinput = np.squeeze(clipinput)
-            #clipinput = np.asarray(clipinput, dtype='float32')
-            # input_var = autograd.Variable(torch.from_numpy(clipinput).cuda(), volatile=True)
-            # #outputs = model(clipinput.transpose(0,2,3,1)).data.cpu().numpy()
-            # outputs = model((input_var-means)/stds).data.cpu().numpy()
-            # outputs = softmax(outputs)
-
+            delta = sample_clamp(mu_samples, -eps[:, None], eps[:, None])
+            adv = x[:, None, :] + delta
+            adv = sample_clamp(adv, clip_min, clip_max)
+            
             #shouldn't this go earlier?
+            #[B * N, F]
             adv = adv.reshape(-1, n_dim)
+            #[B * N, C]
             outputs = self.predict(adv)
+            #TODO: check that nothing is jumbled up
+
+            #[B * N]
+            if self.targeted:
+                success_mask = torch.argmax(outputs, dim=-1) == y_repeat
+            else:
+                success_mask = torch.argmax(outputs, dim=-1) != y_repeat
+
+            #[B, N]
+            success_mask = success_mask.reshape(n_batch, self.npop)
             #[B, N, C]
+            adv = adv.reshape(n_batch, self.npop, -1)
             #outputs = outputs.reshape(n_batch, self.npop, -1)
             #
 
             #[B * N]
-            losses = loss_fn(outputs, y_repeat)
+            losses = self.loss_fn(outputs, y_repeat, targeted=self.targeted)
             #[B, N]
             losses = losses.reshape(n_batch, self.npop)
             
@@ -192,16 +224,15 @@ class NAttack(Attack, LabelMixin):
             #z_score = (losses - np.mean(losses)) / (np.std(losses) + 1e-7)
             #[B, N]
             z_score = (losses - losses.mean(1)[:, None]) / (losses.std(1)[:, None] + 1e-7)
-            z_score = z_score.cpu().numpy()
 
             #mu_t: [B, F]
             #gauss_samples : [B,N,F]
             #z_score: [B,N]
-            mu_t = mu_t + (alpha/(self.npop*sigma)) * (z_score[:, :, None] * gauss_samples).sum(1)
+            mu_t = mu_t + (alpha/(self.npop*self.sigma)) * (z_score[:, :, None] * gauss_samples).sum(1)
 
-        #This isn't the adversarial example, you need to store adv. examples in the above....
-        #these are triggered if misclassified
-        adv = np.tanh(x_scaled + mu_t) * scale + shift
+            #TODO: should losses be increasing or decreasing?
+
+        adv = select_best_example(x, adv, self.order, losses, success_mask)
         return adv
 
         
