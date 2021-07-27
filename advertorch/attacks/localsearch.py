@@ -186,7 +186,7 @@ class LocalSearchAttack(Attack, LabelMixin):
                 for col in range(
                     int(colcenter) - self.d, int(colcenter) + self.d + 1)]
             pxy = list(set((row, col) for row, col in pxy if (
-                0 <= row < x.shape[2] and 0 <= col < x.shape[1])))
+                    0 <= row < x.shape[2] and 0 <= col < x.shape[1])))
             pxy = torch.FloatTensor(pxy)
             ii += 1
         if best_img is None:

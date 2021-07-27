@@ -114,6 +114,10 @@ def compare_attacks(key, item):
     fmodel = foolbox.models.PyTorchModel(
         model, bounds=(0, 1),
         num_classes=NUM_CLASS,
+<<<<<<< HEAD
+=======
+        device="cpu"
+>>>>>>> master
     )
     fb_adversary = item["fb_class"](fmodel)
     fb_kwargs = merge2dicts(item["kwargs"], item["fb_kwargs"])

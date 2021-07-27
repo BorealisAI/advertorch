@@ -82,7 +82,7 @@ class AverageSmoothing2D(ConvSmoothing2D):
 
     def __init__(self, channels, kernel_size):
         kernel = torch.ones((channels, 1, kernel_size, kernel_size)) / (
-            kernel_size * kernel_size)
+                kernel_size * kernel_size)
         super(AverageSmoothing2D, self).__init__(kernel)
 
 
@@ -115,8 +115,8 @@ def _generate_gaussian_kernel(sigma, channels, kernel_size=None):
     var = sigma ** 2
 
     gaussian_kernel = (
-        1. / (2. * math.pi * var) *
-        torch.exp(-(gridxy - mean).pow(2).sum(dim=0) / (2 * var))
+            1. / (2. * math.pi * var) *
+            torch.exp(-(gridxy - mean).pow(2).sum(dim=0) / (2 * var))
     )
 
     gaussian_kernel /= torch.sum(gaussian_kernel)
