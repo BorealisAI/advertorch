@@ -11,7 +11,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import torch
-from torch.autograd.gradcheck import zero_gradients
 import time
 
 try:
@@ -20,6 +19,7 @@ except ImportError:
     from advertorch.utils import torch_flip as flip
 
 from advertorch.utils import replicate_input
+from advertorch.attacks.utils import zero_gradients
 
 from .base import Attack
 from .base import LabelMixin

@@ -122,6 +122,7 @@ def test_bpda_nograd_on_multi_input(device, func):
         z_ = z.detach().requires_grad_()
 
     net = nn.Sequential(func, DummyNet())
+    net.to(device)
 
     with torch.enable_grad():
         loss_ = net(z_).sum()

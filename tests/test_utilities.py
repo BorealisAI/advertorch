@@ -85,7 +85,6 @@ def test_per_image_standardization():
 
 
 def test_clamp():
-
     def _convert_to_float(x):
         return float(x) if x is not None else None
 
@@ -95,9 +94,7 @@ def test_clamp():
     def _convert_to_single_tensor(x, data):
         return x * torch.ones_like(data[0]) if x is not None else None
 
-
     for min, max in [(-1, None), (None, 1), (-1, 1)]:
-
         data = 3 * torch.randn((11, 12, 13))
         case1 = clamp(data, min, max)
         case2 = clamp(data, _convert_to_float(min), _convert_to_float(max))
