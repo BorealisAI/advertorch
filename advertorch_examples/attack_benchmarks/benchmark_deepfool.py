@@ -10,45 +10,81 @@
 # Automatically generated benchmark report (screen print of running this file)
 #
 # sysname: Linux
-# release: 3.10.0-1062.el7.x86_64
-# version: #1 SMP Wed Aug 7 18:08:02 UTC 2019
+# release: 5.8.0-63-generic
+# version: #71~20.04.1-Ubuntu SMP Thu Jul 15 17:46:08 UTC 2021
 # machine: x86_64
-# python: 3.7.3
-# torch: 1.4.0
-# torchvision: 0.5.0
-# advertorch: 0.2.2
-
+# python: 3.8.5
+# torch: 1.9.0+cu102
+# torchvision: 0.10.0+cu102
+# advertorch: 0.2.4
+#
 # attack type: DeepfoolLinfAttack
-# attack kwargs: nb_iter=50
+# attack kwargs: eps=0.3
+#                nb_iter=50
 #                overshoot=0.02
 #                clip_min=0.0
 #                clip_max=1.0
 # data: mnist_test, 10000 samples
 # model: MNIST LeNet5 standard training
 # accuracy: 98.89%
-# attack success rate: 32.76%
+# attack success rate: 100.0%
 # Among successful attacks (2 norm) on correctly classified examples:
 #    minimum distance: 0.004306
-#    median distance: 1.528
-#    maximum distance: 2.061
-#    average distance: 1.403
-#    distance standard deviation: 0.4457
-
+#    median distance: 2.356
+#    maximum distance: 5.376
+#    average distance: 2.33
+#    distance standard deviation: 0.8195
+#
 # attack type: DeepfoolLinfAttack
-# attack kwargs: nb_iter=50
+# attack kwargs: eps=0.3
+#                nb_iter=150
+#                overshoot=0.02
+#                clip_min=0.0
+#                clip_max=1.0
+# data: mnist_test, 10000 samples
+# model: MNIST LeNet5 standard training
+# accuracy: 98.89%
+# attack success rate: 100.0%
+# Among successful attacks (2 norm) on correctly classified examples:
+#    minimum distance: 0.004306
+#    median distance: 2.356
+#    maximum distance: 5.376
+#    average distance: 2.33
+#    distance standard deviation: 0.8195
+#
+# attack type: DeepfoolLinfAttack
+# attack kwargs: eps=0.3
+#                nb_iter=50
 #                overshoot=0.02
 #                clip_min=0.0
 #                clip_max=1.0
 # data: mnist_test, 10000 samples
 # model: MNIST LeNet 5 PGD training according to Madry et al. 2018
 # accuracy: 98.64%
-# attack success rate: 2.48%
+# attack success rate: 7.42%
 # Among successful attacks (2 norm) on correctly classified examples:
 #    minimum distance: 0.02558
-#    median distance: 1.058
-#    maximum distance: 2.139
-#    average distance: 0.9923
-#    distance standard deviation: 0.5285
+#    median distance: 3.37
+#    maximum distance: 6.413
+#    average distance: 3.199
+#    distance standard deviation: 1.395
+#
+# attack type: DeepfoolLinfAttack
+# attack kwargs: eps=0.3
+#                nb_iter=150
+#                overshoot=0.02
+#                clip_min=0.0
+#                clip_max=1.0
+# data: mnist_test, 10000 samples
+# model: MNIST LeNet 5 PGD training according to Madry et al. 2018
+# accuracy: 98.64%
+# attack success rate: 8.41%
+# Among successful attacks (2 norm) on correctly classified examples:
+#    minimum distance: 0.02558
+#    median distance: 3.804
+#    maximum distance: 6.413
+#    average distance: 3.422
+#    distance standard deviation: 1.416
 
 
 from advertorch_examples.utils import get_mnist_test_loader
@@ -66,7 +102,9 @@ device = "cuda"
 print('Begin testing...')
 lst_attack = [
     (DeepfoolLinfAttack, dict(
-        nb_iter=50, overshoot=0.02, clip_min=0., clip_max=1.)),
+        eps=0.3, nb_iter=50, overshoot=0.02, clip_min=0., clip_max=1.)),
+    (DeepfoolLinfAttack, dict(
+        eps=0.3, nb_iter=150, overshoot=0.02, clip_min=0., clip_max=1.)),
 ]  # each element in the list is the tuple (attack_class, attack_kwargs)
 
 mnist_clntrained_model = get_mnist_lenet5_clntrained().to(device)
