@@ -1,4 +1,4 @@
-# Copyright (c) 2020-present, Jérôme Rony.
+# Copyright (c) 2020-present, Pouya Bashivan.
 # All rights reserved.
 #
 # This source code is licensed under the license found in the
@@ -16,9 +16,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from advertorch.utils import batch_clamp, clamp
+from advertorch.utils import replicate_input, replicate_input_withgrad
+
 import torch as torch
 from .base import Attack, LabelMixin
-from advertorch.utils import replicate_input, replicate_input_withgrad
 
 
 class DeepfoolLinfAttack(Attack, LabelMixin):
@@ -54,12 +56,14 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
         self.overshoot = overshoot
         self.targeted = targeted
 
-    def is_adv(self, logits, y):  # =criterion
+    def is_adv(self, logits, y):  
+        # criterion
         y_hat = logits.argmax(-1)
         is_adv = y_hat != y
         return is_adv
 
-    def get_deltas_logits(self, x, k, classes):  # =loss_fn
+    def get_deltas_logits(self, x, k, classes):  
+        # definition of loss_fn
         N = len(classes)
         rows = range(N)
         i0 = classes[:, 0]
@@ -74,19 +78,18 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
                 'deltas': delta_logits,
                 'logits': logits}
 
-    def get_grads(self, x, k, classes):  # =loss_aux_and_grad
+    def get_grads(self, x, k, classes):  
         deltas_logits = self.get_deltas_logits(x, k, classes)
         deltas_logits['sum_deltas'].backward()
         deltas_logits['grads'] = x.grad.clone()
         x.grad.data.zero_()
         return deltas_logits
 
-    def get_distances(self, deltas, grads):  # =get_distances
-        # foolbox code uses start_dim=2 why??
+    def get_distances(self, deltas, grads):  
         return abs(deltas) / (
             grads.flatten(start_dim=2, end_dim=-1).abs().sum(axis=-1) + 1e-8)
 
-    def get_perturbations(self, distances, grads):  # =get_perturbations
+    def get_perturbations(self, distances, grads):  
         return self.atleast_kd(distances, grads.ndim) * grads.sign()
 
     def atleast_kd(self, x, k):
@@ -166,13 +169,15 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
             assert p_step.shape == x0.shape
 
             p_total += p_step
-            p_total = p_total.clamp_(-self.eps, self.eps)
+            p_total = batch_clamp(self.eps, p_total)
+
             # don't do anything for those that are already adversarial
             x = torch.where(
                 self.atleast_kd(is_adv, x.ndim),
                 x,
                 x0 + (1.0 + self.overshoot) * p_total,
             )  # =x_{i+1}
-            x = x.clamp_(self.clip_min, self.clip_max).clone().detach().requires_grad_() # noqa
+            
+            x = clamp(x, min=self.clip_min, max=self.clip_max).clone().detach().requires_grad_() # noqa
 
         return x.detach()
