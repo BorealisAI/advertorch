@@ -89,7 +89,7 @@ class FABAttack(Attack, LabelMixin):
             g2[counter] = im.grad.data
 
         g2 = torch.transpose(g2, 0, 1).detach()
-        y2 = self.predict(imgs).detach()
+        y2 = y.detach()
         df = y2 - y2[torch.arange(imgs.shape[0]), la].unsqueeze(1)
         dg = g2 - g2[torch.arange(imgs.shape[0]), la].unsqueeze(1)
         df[torch.arange(imgs.shape[0]), la] = 1e10
@@ -440,7 +440,7 @@ class FABAttack(Attack, LabelMixin):
                     a2 = a0[-bs:]
                     alpha = torch.min(torch.max(a1 / (a1 + a2),
                                                 torch.zeros(a1.shape)
-                                                .to(self.device))[0],
+                                                .to(self.device)),
                                       self.alpha_max * torch.ones(a1.shape)
                                       .to(self.device))
                     x1 = ((x1 + self.eta * d1) * (1 - alpha) +
