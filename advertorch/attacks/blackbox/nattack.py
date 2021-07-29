@@ -12,20 +12,20 @@ from .utils import _check_param
 
 from advertorch.utils import to_one_hot
 
-npop = 300     # population size
-sigma = 0.1    # noise standard deviation
-alpha = 0.02  # learning rate
-# alpha = 0.001  # learning rate
-boxmin = 0
-boxmax = 1
-shift = (boxmin + boxmax) / 2. # 1/2 ... rescale based on clip_min, clip_max ... rename to shift
-scale = (boxmax - boxmin) / 2. # 1/2 ... rename to scale
+# nb_samples = 300     # population size
+# sigma = 0.1    # noise standard deviation
+# alpha = 0.02  # learning rate
+# # alpha = 0.001  # learning rate
+# boxmin = 0
+# boxmax = 1
+# shift = (boxmin + boxmax) / 2. # 1/2 ... rescale based on clip_min, clip_max ... rename to shift
+# scale = (boxmax - boxmin) / 2. # 1/2 ... rename to scale
 
 #scale = (clip_max - clip_min) / 2
 #shift = (clip_max + clip_min) / 2
 
-epsi = 0.031
-epsilon = 1e-30 #numerical safety factor (buffer)
+#epsi = 0.031
+#epsilon = 1e-30 #numerical safety factor (buffer)
 
 def torch_arctanh(x, eps=1e-6):
     x *= (1. - eps)
@@ -101,6 +101,7 @@ def select_best_example(x_orig, x_adv, order, losses, success):
         raise ValueError('unsupported metric {}'.format(order))
 
     #[B, 1]
+    #TODO: use the success mask!
     best_loss_ind = losses.argmin(-1)[:, None, None]
     best_loss_ind = best_loss_ind.expand(-1, -1, x_adv.shape[-1])
     #best_dist_ind = dists.argmin(-1)
@@ -113,6 +114,76 @@ def select_best_example(x_orig, x_adv, order, losses, success):
 #TODO: Make classes for Linf, L2, ...
 #TODO: accept custom losses
 
+def n_attack(
+        predict_fn, loss_fn, x, y, order, proj_step, eps, clip_min, clip_max,
+        delta_init=None, nb_samples=100, nb_iter=40, eps_iter=0.02, 
+        sigma=0.1, targeted=False
+    ):
+    #TODO: check correspondence
+    n_batch, n_dim = x.shape
+    y_repeat = y.repeat(nb_samples, 1).T.flatten()
+
+    #[B,F]
+    mu_t = torch.FloatTensor(n_batch, n_dim).normal_() * 0.001
+    mu_t = mu_t.to(x.device)
+
+    for _ in range(nb_iter):
+        #Sample from N(0,I)
+        #[B, N, F]
+        gauss_samples = torch.FloatTensor(n_batch, nb_samples, n_dim).normal_()
+        gauss_samples = gauss_samples.to(x.device)
+
+        #Compute gi = g(mu_t + sigma * samples)
+        #[B, N, F]
+        mu_samples = mu_t[:, None, :] + sigma * gauss_samples
+
+        #linf proj
+        #[B, N, F]
+        delta = sample_clamp(mu_samples, -eps[:, None], eps[:, None])
+        adv = x[:, None, :] + delta
+        adv = sample_clamp(adv, clip_min, clip_max)
+        
+        #shouldn't this go earlier?
+        #[B * N, F]
+        adv = adv.reshape(-1, n_dim)
+        #[B * N, C]
+        outputs = predict_fn(adv)
+        #TODO: check that nothing is jumbled up
+
+        #[B * N]
+        if targeted:
+            success_mask = torch.argmax(outputs, dim=-1) == y_repeat
+        else:
+            success_mask = torch.argmax(outputs, dim=-1) != y_repeat
+
+        #[B, N]
+        success_mask = success_mask.reshape(n_batch, nb_samples)
+        #[B, N, C]
+        adv = adv.reshape(n_batch, nb_samples, -1)
+        #outputs = outputs.reshape(n_batch, self.nb_samples, -1)
+        #
+
+        #[B * N]
+        losses = loss_fn(outputs, y_repeat, targeted=targeted)
+        #[B, N]
+        losses = losses.reshape(n_batch, nb_samples)
+        
+        #[N]
+        #z_score = (losses - np.mean(losses)) / (np.std(losses) + 1e-7)
+        #[B, N]
+        z_score = (losses - losses.mean(1)[:, None]) / (losses.std(1)[:, None] + 1e-7)
+
+        #mu_t: [B, F]
+        #gauss_samples : [B,N,F]
+        #z_score: [B,N]
+        mu_t = mu_t + (eps_iter/(nb_samples*sigma)) * (z_score[:, :, None] * gauss_samples).sum(1)
+
+        #TODO: should losses be increasing or decreasing?
+
+    
+    return adv, losses, success_mask
+
+
 class NAttack(Attack, LabelMixin):
     def __init__(
             self, predict, eps: float, order='linf',
@@ -123,7 +194,6 @@ class NAttack(Attack, LabelMixin):
             sigma=0.1,
             clip_min=0., clip_max=1.,
             targeted : bool = False,
-            npop = 300,
             query_limit = None
             ):
 
@@ -143,7 +213,6 @@ class NAttack(Attack, LabelMixin):
         self.eps_iter = eps_iter
         self.sigma = sigma
         self.targeted = targeted
-        self.npop = npop
         
         self.proj_maker = l2_proj if order == 'l2' else linf_proj
 
@@ -157,10 +226,9 @@ class NAttack(Attack, LabelMixin):
         #https://github.com/Cold-Winter/Nattack/blob/master/therm-adv/re_li_attack_notanh.py
         #TODO: tanh?
 
-    def perturb(self, x, y):
+    def perturb(self, x, y, delta_init=None):
         #[B, F]
         x, y = self._verify_and_process_inputs(x, y)
-        x_adv = x.clone()
 
         n_batch, n_dim = x.shape
 
@@ -172,67 +240,15 @@ class NAttack(Attack, LabelMixin):
 
         proj_step = self.proj_maker(x, eps)
 
-        #TODO: check correspondence
-        y_repeat = y.repeat(self.npop, 1).T.flatten()
-
-        #[B,F]
-        mu_t = torch.FloatTensor(n_batch, n_dim).normal_() * 0.001
-        mu_t = mu_t.to(x.device)
-
-        for _ in range(self.nb_iter):
-            #Sample from N(0,I)
-            #[B, N, F]
-            gauss_samples = torch.FloatTensor(n_batch, self.npop, n_dim).normal_()
-            gauss_samples = gauss_samples.to(x.device)
-
-            #Compute gi = g(mu_t + sigma * samples)
-            #[B, N, F]
-            mu_samples = mu_t[:, None, :] + self.sigma * gauss_samples
-
-            #linf proj
-            #[B, N, F]
-            delta = sample_clamp(mu_samples, -eps[:, None], eps[:, None])
-            adv = x[:, None, :] + delta
-            adv = sample_clamp(adv, clip_min, clip_max)
-            
-            #shouldn't this go earlier?
-            #[B * N, F]
-            adv = adv.reshape(-1, n_dim)
-            #[B * N, C]
-            outputs = self.predict(adv)
-            #TODO: check that nothing is jumbled up
-
-            #[B * N]
-            if self.targeted:
-                success_mask = torch.argmax(outputs, dim=-1) == y_repeat
-            else:
-                success_mask = torch.argmax(outputs, dim=-1) != y_repeat
-
-            #[B, N]
-            success_mask = success_mask.reshape(n_batch, self.npop)
-            #[B, N, C]
-            adv = adv.reshape(n_batch, self.npop, -1)
-            #outputs = outputs.reshape(n_batch, self.npop, -1)
-            #
-
-            #[B * N]
-            losses = self.loss_fn(outputs, y_repeat, targeted=self.targeted)
-            #[B, N]
-            losses = losses.reshape(n_batch, self.npop)
-            
-            #[N]
-            #z_score = (losses - np.mean(losses)) / (np.std(losses) + 1e-7)
-            #[B, N]
-            z_score = (losses - losses.mean(1)[:, None]) / (losses.std(1)[:, None] + 1e-7)
-
-            #mu_t: [B, F]
-            #gauss_samples : [B,N,F]
-            #z_score: [B,N]
-            mu_t = mu_t + (alpha/(self.npop*self.sigma)) * (z_score[:, :, None] * gauss_samples).sum(1)
-
-            #TODO: should losses be increasing or decreasing?
+        adv, losses, success_mask = n_attack(
+            predict_fn=self.predict, loss_fn=self.loss_fn, x=x, y=y, order=self.order, 
+            proj_step=proj_step, eps=eps, clip_min=clip_min, clip_max=clip_max,
+            delta_init=None, nb_samples=self.nb_samples, nb_iter=self.nb_iter, 
+            eps_iter=self.eps_iter, sigma=self.sigma, targeted=self.targeted
+        )
 
         adv = select_best_example(x, adv, self.order, losses, success_mask)
+
         return adv
 
         
