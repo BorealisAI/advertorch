@@ -21,3 +21,5 @@ build/
 dist/
 _build/
 _tutorials/
+.coverage
+*.xml

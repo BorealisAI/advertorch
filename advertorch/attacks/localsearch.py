@@ -52,7 +52,7 @@ class SinglePixelAttack(Attack, LabelMixin):
         if self.comply_with_foolbox is True:
             np.random.seed(233333)
             rand_np = np.random.permutation(x.shape[1] * x.shape[2])
-            pixels = torch.from_numpy(rand_np)
+            pixels = torch.from_numpy(rand_np).type(torch.LongTensor)
         else:
             pixels = torch.randperm(x.shape[1] * x.shape[2])
         pixels = pixels.to(x.device)
@@ -146,7 +146,7 @@ class LocalSearchAttack(Attack, LabelMixin):
             # Computing the function g using the neighbourhood
             if self.comply_with_foolbox:
                 rand_np = np.random.permutation(len(pxy))[:self.max_nb_seeds]
-                pxy = pxy[torch.from_numpy(rand_np)]
+                pxy = pxy[torch.from_numpy(rand_np).type(torch.LongTensor)]
             else:
                 pxy = pxy[torch.randperm(len(pxy))[:self.max_nb_seeds]]
 
