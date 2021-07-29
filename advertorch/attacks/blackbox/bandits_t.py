@@ -54,6 +54,52 @@ def linf_proj(image, eps):
     return proj
 
 
+def bandit_attack(
+        x, y, loss_fn, prior_step, data_step, proj_step, clip_min, clip_max, 
+        prior_init=None, fd_eta=0.01, exploration=0.01, online_lr=0.1, nb_iter=40,
+        eps_iter=0.01,
+    ):
+    #if so, we could just use the same estimate grad
+    ndim = np.prod(list(x.shape[1:]))
+    #The idea of this is that the gradient becomes more accurate as we
+    #call it multiple times.
+    #This gradient is learnt in an online fashion.
+
+    adv = x.clone()
+
+    if prior_init is None:
+        prior = torch.zeros_like(x)
+    else:
+        prior = prior_init.clone()
+
+    for t in range(nb_iter):
+        #before: # [nbatch, ndim, nsamples]
+        #now: # [nbatch, ndim]
+        exp_noise = exploration * torch.randn_like(prior)/(ndim**0.5)
+        
+        # Query deltas for finite difference estimator
+        ##...this step needs to change
+        q1 = F.normalize(prior + exp_noise, dim=-1)
+        q2 = F.normalize(prior - exp_noise, dim=-1)
+        # Loss points for finite difference estimator
+        L1 = loss_fn(adv + fd_eta * q1) # L(prior + c*noise)
+        L2 = loss_fn(adv + fd_eta * q2) # L(prior - c*noise)
+
+        delta_L = (L1 - L2)/(fd_eta * exploration) #[nbatch]
+        
+        grad_est = delta_L * exp_noise
+
+        prior = prior_step(prior, grad_est, online_lr)
+        #upsampler(prior*correct_classified_mask.view(-1, 1, 1, 1))
+        adv = data_step(adv, prior, eps_iter)
+        adv = proj_step(adv)
+    
+        #TODO: check this clamping is correct
+
+        adv = torch.maximum(adv, clip_min)
+        adv = torch.minimum(adv, clip_max)
+
+    return adv, prior
 
 #https://github.com/MadryLab/blackbox-bandits/blob/master/src/main.py
 class BanditAttack(Attack, LabelMixin):
@@ -103,7 +149,6 @@ class BanditAttack(Attack, LabelMixin):
         :return: tensor containing perturbed inputs.
         """
         x, y = self._verify_and_process_inputs(x, y)
-        x_adv = x.clone()
 
         eps = _check_param(self.eps, x.new_full((x.shape[0],), 1), 'eps')
         clip_min = _check_param(self.clip_min, x, 'clip_min')
@@ -124,40 +169,15 @@ class BanditAttack(Attack, LabelMixin):
             return loss
 
         proj_step = self.proj_maker(x, eps)
+
+        adv, prior = bandit_attack(
+            x, y, loss_fn=L, prior_step=self.prior_step, data_step=self.data_step, 
+            proj_step=proj_step, clip_min=clip_min, clip_max=clip_max, 
+            prior_init=None,  fd_eta=self.fd_eta, exploration=self.exploration,
+            online_lr=self.online_lr, nb_iter=self.nb_iter, eps_iter=self.eps_iter
+        )
         
-        #if so, we could just use the same estimate grad
-        ndim = np.prod(list(x.shape[1:]))
-        #The idea of this is that the gradient becomes more accurate as we
-        #call it multiple times.
-        #This gradient is learnt in an online fashion.
-
-        prior = torch.zeros_like(x)
-
-        for t in range(self.nb_iter):
-            #before: # [nbatch, ndim, nsamples]
-            #now: # [nbatch, ndim]
-            exp_noise = self.exploration * torch.randn_like(prior)/(ndim**0.5)
-            
-            # Query deltas for finite difference estimator
-            ##...this step needs to change
-            q1 = F.normalize(prior + exp_noise, dim=-1)
-            q2 = F.normalize(prior - exp_noise, dim=-1)
-            # Loss points for finite difference estimator
-            L1 = L(x_adv + self.fd_eta * q1) # L(prior + c*noise)
-            L2 = L(x_adv + self.fd_eta * q2) # L(prior - c*noise)
-
-            delta_L = (L1 - L2)/(self.fd_eta * self.exploration) #[nbatch]
-            
-            grad_est = delta_L * exp_noise
-
-            prior = self.prior_step(prior, grad_est, self.online_lr)
-            #upsampler(prior*correct_classified_mask.view(-1, 1, 1, 1))
-            x_adv = self.data_step(x_adv, prior, self.eps_iter)
-            x_adv = proj_step(x_adv)
-        
-            x_adv = torch.clamp(x_adv, self.clip_min, self.clip_max)
-
-        return x_adv
+        return adv
         
 
 

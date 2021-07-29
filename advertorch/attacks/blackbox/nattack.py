@@ -116,7 +116,7 @@ def select_best_example(x_orig, x_adv, order, losses, success):
 
 def n_attack(
         predict_fn, loss_fn, x, y, order, proj_step, eps, clip_min, clip_max,
-        delta_init=None, nb_samples=100, nb_iter=40, eps_iter=0.02, 
+        mu_init=None, nb_samples=100, nb_iter=40, eps_iter=0.02, 
         sigma=0.1, targeted=False
     ):
     #TODO: check correspondence
@@ -124,8 +124,11 @@ def n_attack(
     y_repeat = y.repeat(nb_samples, 1).T.flatten()
 
     #[B,F]
-    mu_t = torch.FloatTensor(n_batch, n_dim).normal_() * 0.001
-    mu_t = mu_t.to(x.device)
+    if mu_init is None:
+        mu_t = torch.FloatTensor(n_batch, n_dim).normal_() * 0.001
+        mu_t = mu_t.to(x.device)
+    else:
+        mu_init = mu_init.clone()
 
     for _ in range(nb_iter):
         #Sample from N(0,I)
