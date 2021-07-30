@@ -104,8 +104,7 @@ def perturb_iterative(xvar, yvar, predict, nb_iter, eps, eps_iter, loss_fn,
             delta.data = delta.data + batch_multiply(eps_iter, grad)
 
             delta.data = batch_l1_proj(delta.data.cpu(), eps)
-            if xvar.is_cuda:
-                delta.data = delta.data.cuda()
+            delta.data = delta.data.to(xvar.device)
             delta.data = clamp(xvar.data + delta.data, clip_min, clip_max
                                ) - xvar.data
         else:
