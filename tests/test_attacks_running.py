@@ -32,6 +32,7 @@ from advertorch.attacks import ElasticNetL1Attack
 from advertorch.attacks import LBFGSAttack
 from advertorch.attacks import JacobianSaliencyMapAttack
 from advertorch.attacks import SpatialTransformAttack
+from advertorch.attacks import SpatialTransformAttack2
 from advertorch.attacks import LinfSPSAAttack
 from advertorch.attacks import LinfFABAttack
 from advertorch.attacks import L2FABAttack
@@ -90,6 +91,9 @@ attack_kwargs = {
     LBFGSAttack: {"num_classes": NUM_CLASS},
     JacobianSaliencyMapAttack: {"num_classes": NUM_CLASS, "gamma": 0.01},
     SpatialTransformAttack: {"num_classes": NUM_CLASS},
+    SpatialTransformAttack2: {
+        "spatial_constraint": {'rot': 30, 'trans': 3 / 28}, "random_tries": 10,
+        "attack_type": 'random'},
     DDNL2Attack: {"nb_iter": 5},
     LinfSPSAAttack: {"eps": 0.3, "max_batch_size": 63},
     LinfFABAttack: {"n_iter": 5},
