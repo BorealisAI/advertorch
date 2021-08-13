@@ -56,7 +56,7 @@ def linf_proj(image, eps):
 
 def bandit_attack(
         x, y, loss_fn, prior_step, data_step, proj_step, clip_min, clip_max, 
-        prior_init=None, fd_eta=0.01, exploration=0.01, online_lr=0.1, nb_iter=40,
+        delta_init=None, prior_init=None, fd_eta=0.01, exploration=0.01, online_lr=0.1, nb_iter=40,
         eps_iter=0.01,
     ):
     #if so, we could just use the same estimate grad
@@ -65,7 +65,10 @@ def bandit_attack(
     #call it multiple times.
     #This gradient is learnt in an online fashion.
 
-    adv = x.clone()
+    if delta_init is None:
+        adv = x.clone()
+    else:
+        adv = x + delta_init
 
     if prior_init is None:
         prior = torch.zeros_like(x)
@@ -173,7 +176,7 @@ class BanditAttack(Attack, LabelMixin):
         adv, prior = bandit_attack(
             x, y, loss_fn=L, prior_step=self.prior_step, data_step=self.data_step, 
             proj_step=proj_step, clip_min=clip_min, clip_max=clip_max, 
-            prior_init=None,  fd_eta=self.fd_eta, exploration=self.exploration,
+            delta_init=None, prior_init=None,  fd_eta=self.fd_eta, exploration=self.exploration,
             online_lr=self.online_lr, nb_iter=self.nb_iter, eps_iter=self.eps_iter
         )
         
