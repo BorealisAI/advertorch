@@ -115,7 +115,7 @@ def select_best_example(x_orig, x_adv, order, losses, success):
 #TODO: accept custom losses
 
 def n_attack(
-        predict_fn, loss_fn, x, y, order, proj_step, eps, clip_min, clip_max,
+        predict_fn, loss_fn, x, y, order, eps, clip_min, clip_max,
         mu_init=None, nb_samples=100, nb_iter=40, eps_iter=0.02, 
         sigma=0.1, targeted=False
     ):
@@ -184,7 +184,7 @@ def n_attack(
         #TODO: should losses be increasing or decreasing?
 
     
-    return adv, losses, success_mask
+    return adv, mu_t, losses, success_mask
 
 
 class NAttack(Attack, LabelMixin):
@@ -216,8 +216,6 @@ class NAttack(Attack, LabelMixin):
         self.eps_iter = eps_iter
         self.sigma = sigma
         self.targeted = targeted
-        
-        self.proj_maker = l2_proj if order == 'l2' else linf_proj
 
         #If aiming for query efficiency, stop as soon as one adversarial
         #example is found.  Set to False to continue iteration and find best
@@ -229,7 +227,7 @@ class NAttack(Attack, LabelMixin):
         #https://github.com/Cold-Winter/Nattack/blob/master/therm-adv/re_li_attack_notanh.py
         #TODO: tanh?
 
-    def perturb(self, x, y, delta_init=None):
+    def perturb(self, x, y, mu_init=None):
         #[B, F]
         x, y = self._verify_and_process_inputs(x, y)
 
@@ -241,12 +239,10 @@ class NAttack(Attack, LabelMixin):
         clip_min = _check_param(self.clip_min, x, 'clip_min')
         clip_max = _check_param(self.clip_max, x, 'clip_max')
 
-        proj_step = self.proj_maker(x, eps)
-
-        adv, losses, success_mask = n_attack(
+        adv, mu_t, losses, success_mask = n_attack(
             predict_fn=self.predict, loss_fn=self.loss_fn, x=x, y=y, order=self.order, 
-            proj_step=proj_step, eps=eps, clip_min=clip_min, clip_max=clip_max,
-            delta_init=None, nb_samples=self.nb_samples, nb_iter=self.nb_iter, 
+            eps=eps, clip_min=clip_min, clip_max=clip_max,
+            mu_init=None, nb_samples=self.nb_samples, nb_iter=self.nb_iter, 
             eps_iter=self.eps_iter, sigma=self.sigma, targeted=self.targeted
         )
 
