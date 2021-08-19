@@ -128,7 +128,7 @@ def n_attack(
         mu_t = torch.FloatTensor(n_batch, n_dim).normal_() * 0.001
         mu_t = mu_t.to(x.device)
     else:
-        mu_init = mu_init.clone()
+        mu_t = mu_init.clone()
 
     for _ in range(nb_iter):
         #Sample from N(0,I)
