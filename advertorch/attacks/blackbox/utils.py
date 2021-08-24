@@ -1,3 +1,5 @@
+import numpy as np
+
 import torch
 
 def _check_param(param, x, name):
