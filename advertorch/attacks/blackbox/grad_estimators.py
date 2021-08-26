@@ -51,10 +51,10 @@ class GradientWrapper(torch.nn.Module):
 
     def batch_query(self, x):
         #TODO: accomodate images...
-        n_batch, n_dim, n_samples = x.shape
+        n_batch, n_dim, nb_samples = x.shape
         x = x.permute(0, 2, 1).reshape(-1, n_dim)
         outputs = self.func(x) #shape [..., n_output]
-        outputs = outputs.reshape(n_batch, n_samples, -1)
+        outputs = outputs.reshape(n_batch, nb_samples, -1)
 
         return outputs.permute(0, 2, 1)
     
@@ -94,9 +94,9 @@ class FDWrapper(GradientWrapper):
 
 
 class NESWrapper(GradientWrapper):
-    def __init__(self, func, n_samples, fd_eta=1e-3):
+    def __init__(self, func, nb_samples, fd_eta=1e-3):
         super().__init__(func)
-        self.n_samples = n_samples
+        self.nb_samples = nb_samples
         self.fd_eta = fd_eta
 
     def estimate_grad(self, x, prior=None):
@@ -105,7 +105,7 @@ class NESWrapper(GradientWrapper):
         ndim = np.prod(list(x.shape[1:]))
 
         # [nbatch, ndim, nsamples]
-        exp_noise = x.new_full(tuple(x.shape) + (self.n_samples,), 0)
+        exp_noise = x.new_full(tuple(x.shape) + (self.nb_samples,), 0)
         exp_noise.normal_()
         exp_noise /= (ndim ** 0.5)
 

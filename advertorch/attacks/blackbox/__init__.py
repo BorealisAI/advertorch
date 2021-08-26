@@ -1,4 +1,4 @@
-from .gen_attack import GeneticL2Attack
+from .gen_attack import GeneticLinfAttack
 
 from .naive_attack import NaiveAttack
 from .nes_attack import NESAttack

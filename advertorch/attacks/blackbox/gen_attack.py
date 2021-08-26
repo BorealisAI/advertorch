@@ -30,6 +30,7 @@ from advertorch.utils import normalize_by_pnorm
 from advertorch.utils import clamp_by_pnorm
 from advertorch.utils import is_float_or_torch_tensor
 from advertorch.utils import batch_multiply
+from .utils import _check_param
 
 #TODO: rename this import, it is wrong.
 #TODO: difference between linf_eps and clip_min/clip_max
@@ -37,7 +38,251 @@ from advertorch.utils import batch_multiply
 from advertorch.utils import clamp as batch_clamp
 from advertorch.utils import replicate_input
 
-class GeneticL2Attack(Attack, LabelMixin):
+RHOMIN = 0.1
+ALPHAMIN = 0.15
+
+def gen_attack_score(output, target, targeted=False):
+    n_class = output.shape[-1]
+    y_onehot = F.one_hot(target, num_classes=n_class)
+    y_onehot = 2 * y_onehot - 1 #(+1) only for the positive class
+
+    score = (y_onehot[:, None, :] * output).sum(-1)
+
+    #with this convention, we try to maximize fitness
+    if not targeted:
+        score = -score
+
+    return score
+
+def compute_fitness(predict_fn, loss_fn, adv_pop, y, targeted=False):
+    """
+    The objective function to be solved.
+
+    This source code is inspired by:
+    https://github.com/nesl/adversarial_genattack/blob/
+    2304cdc2a49d2c16b9f43821ad8a29d664f334d1/genattack_tf2.py#L39
+
+    Args:
+        predict_fn: The blackbox model
+        pop_t: candidate adversarial examples
+        y: the class label of x (as an integer)
+
+    Returns:
+        Tensor of fitness (shape: n_batch)
+    """
+    #OBSERVE / TODO:
+    #GenAttack does not require a transform_fn, since it operates on the 
+    #probs directly
+
+    #population shape: [B, N, F]
+    n_batch, n_samples, n_dim = adv_pop.shape
+    #reshape to [B * N, F]
+    adv_pop = adv_pop.reshape(-1, n_dim)
+    #output shape: [B * N, C]
+    probs = predict_fn(adv_pop)
+    
+    #reshape to [B, N, C]
+    probs = probs.reshape(n_batch, n_samples, -1)
+    log_probs = torch.log(probs)
+    #y shape: [B, N]
+    #y_onehot shape: [B, N, C]
+
+    #shape: [B, N]
+    fitness = loss_fn(log_probs, y, targeted=targeted)
+
+    #TODO: clamp to avoid infinites/numerical instabilities
+
+    return fitness
+
+def crossover(p1, p2, probs):
+    u = torch.rand(*p1.shape)
+    return torch.where(probs[:, :, None] > u, p1, p2)
+
+def sample_clamp(x, clip_min, clip_max):
+    new_x = torch.maximum(x, clip_min[:, None, :])
+    new_x = torch.minimum(new_x, clip_max[:, None, :])
+    return new_x
+
+def selection(pop_t, fitness, tau):
+    n_batch, nb_samples, n_dim = pop_t.shape
+
+    probs = F.softmax(fitness / tau, dim=1)
+    cum_probs = probs.cumsum(-1)
+    #Edge case, u1 or u2 is greater than max(cum_probs)
+    cum_probs[:, -1] = 1. + 1e-7
+
+    #parents: instead of selecting one elite, select two, and generate
+    #a new child to create a population around
+    #do this multiple times, for each N
+
+    #sample parent 1 from pop_t according to probs
+    #sample parent 2 from pop_t according to probs
+
+    #sample from multinomial
+    u1, u2 = torch.rand(2, n_batch, nb_samples)
+    
+    #out of the original N samples, we draw another N samples
+    #this requires us to compute the following broadcasted comparison
+    p1ind = -((cum_probs[:, :, None] > u1[:, None, :]).long()).sum(1) + nb_samples
+    p2ind = -((cum_probs[:, :, None] > u2[:, None, :]).long()).sum(1) + nb_samples
+
+    parent1 = torch.gather(
+        pop_t, dim=1, index=p1ind[:, :, None].expand(-1, -1, n_dim)
+    )
+    
+    parent2 = torch.gather(
+        pop_t, dim=1, index=p2ind[:, :, None].expand(-1, -1, n_dim)
+    )
+
+    fp1 = torch.gather(fitness, dim=1, index=p1ind)
+    fp2 = torch.gather(fitness, dim=1, index=p2ind)
+    crossover_prob = fp1 / (fp1 + fp2)
+
+    return crossover(parent1, parent2, crossover_prob)
+
+def mutation(pop_t, alpha, rho, eps):
+    #alpha and eps both have shape [B]
+    perturb_noise = (2 * torch.rand(*pop_t.shape) - 1)
+    perturb_noise = perturb_noise * alpha[:, None, None] * eps[:, None, None]
+
+    #TODO: consistent mulinomial sampling
+
+    mask = (torch.rand(*pop_t.shape) > rho[:, None, None]).float()
+
+    return pop_t + mask * perturb_noise
+
+#TODO: account for other projections
+def linf_project(pop_t, x, eps, clip_min, clip_max):    
+    delta = sample_clamp(pop_t, -eps[:, None], eps[:, None])
+    #mutated_pop = x[:, None, :] + delta
+    #mutated_pop = sample_clamp(mutated_pop, clip_min, clip_max)
+    delta = sample_clamp(x[:, None, :] + delta, clip_min, clip_max
+        ) - x[:, None, :]
+
+    return delta
+
+class GenAttackScheduler():
+    def __init__(self, x, alpha_init=0.4, rho_init=0.5, decay=0.9):
+        n_batch = x.shape[0]
+
+        self.n_batch = n_batch
+        self.crit = 1e-5
+
+        self.best_val = torch.zeros(n_batch).to(x.device)
+        self.num_i = torch.zeros(n_batch).to(x.device)
+        self.num_plateaus = torch.zeros(n_batch).to(x.device)
+
+        self.rho_min = RHOMIN * torch.ones(n_batch).to(x.device)
+        self.alpha_min = ALPHAMIN * torch.ones(n_batch).to(x.device)
+
+        self.zeros = torch.zeros_like(self.num_i)
+
+        #check alpha, rho
+        self.alpha_init = alpha_init
+        self.rho_init = rho_init
+        self.decay = decay
+
+        self.alpha = alpha_init * torch.ones(n_batch).to(x.device)
+        self.rho = rho_init * torch.ones(n_batch).to(x.device)
+
+    def update(self, elite_val):
+        stalled = abs(elite_val - self.best_val) <= self.crit
+        self.num_i = torch.where(stalled, self.num_i + 1, self.zeros)
+        new_plateau = (self.num_i % 100 == 0) & (self.num_i != 0)
+        self.num_plateaus = torch.where(
+            new_plateau, self.num_plateaus + 1, self.num_plateaus
+        )
+        
+        #update alpha and rho
+        self.rho = torch.maximum(
+            self.rho_min, self.rho_init * self.decay ** self.num_plateaus
+        )
+        self.alpha = torch.maximum(
+            self.alpha_min, self.alpha_init * self.decay ** self.num_plateaus
+        )
+
+        self.best_val = torch.maximum(elite_val, self.best_val)
+
+
+def gen_attack(predict_fn, loss_fn, x, y, eps, clip_min, clip_max, nb_samples, nb_iter, tau=0.1, 
+        alpha_init=0.4, rho_init=0.5, decay=0.9, pop_init=None, scheduler=None, targeted=False
+    ):
+    #alpha: mutation range
+    #rho: mutation probability
+    #nb_samples: population size
+    #nb_iter: number of generations
+    #tau: sampling temperature
+    #pop_init: initial population
+
+    #alpha, rho, and tau all control exploration
+    #they are all constants
+    #rho is a mutation probability
+    #alpha is a step size
+
+    #TODO: temperature scaling?
+
+    #TODO: numerical instabilities check
+
+    n_batch, n_dim = x.shape
+    #y_repeat = y.repeat(nb_samples, 1).T.flatten()
+
+    #[B,F]
+    if pop_init is None:
+        #Sample from Uniform(-1, 1)
+        #shape: [B, N, F]
+        pop_t = 2 * torch.rand(n_batch, nb_samples, n_dim) - 1
+        #Sample from Uniform(-eps, eps)
+        pop_t = eps[:, None, None] * pop_t
+        pop_t = pop_t.to(x.device)
+
+        #pop_t = x[:, None, :] + pop_t
+    else:
+        pop_t = pop_init.clone()
+
+    if scheduler is None:
+        scheduler = GenAttackScheduler(x, alpha_init, rho_init, decay)
+
+    #TODO: alpha_init, rho_init
+    #per sample?
+
+    inds = torch.arange(n_batch).to(x.device)
+
+    for _ in range(nb_iter):
+        adv = x[:, None, :] + pop_t
+        #shape: [B, N]
+        fitness = compute_fitness(predict_fn, loss_fn, adv, y, targeted=targeted)
+        #shape: [1, B, 1]
+        #TODO: argmax or argmin?
+        #TODO: doesn't max return argmax?
+        #elite_ind = fitness.argmax(-1) 
+        #[B]
+        #elite_val = fitness.max(-1).values
+        elite_val, elite_ind = fitness.max(-1)
+        #shape: [B, F]
+        #TODO: test this works across devices
+        #elite_adv = fitness[inds, elite_ind, :]
+        elite_adv = adv[inds, elite_ind, :]
+        #shape: [B]
+        elite_pred = predict_fn(elite_adv).argmax(-1)
+
+        #shape: [B, N]
+        #select which members will move onto the next generation
+        children = selection(pop_t, fitness, tau)
+
+        #apply mutations and clipping
+        #add mutated child to next generation (ie update pop_t)
+        pop_t = mutation(children, scheduler.alpha, scheduler.rho, eps)
+        #TODO: account for other projections
+        pop_t = linf_project(pop_t, x, eps, clip_min, clip_max)
+
+        #Update params based on plateaus
+        scheduler.update(elite_val)
+
+    #Partial attack:
+    #If success, leave alone, and turn x -> x[~success]
+    return elite_adv, pop_t, scheduler
+
+class GeneticLinfAttack(Attack, LabelMixin):
     """
     Runs GenAttack https://arxiv.org/abs/1805.11090.
 
@@ -69,29 +314,47 @@ class GeneticL2Attack(Attack, LabelMixin):
         list: if the adversarial attack is successful
         list: number of generations used for each sample
     """
-
+    #gen_attack(predict_fn, x, y, eps, clip_min, clip_max, nb_samples, nb_iter, tau=0.1, 
+    #    alpha_init=0.4, rho_init=0.5, pop_init=None, scheduler=None, targeted=False
+    #)
     def __init__(
-            self, predict, N: int, eps: float, loss_fn=None, 
+            self, predict, eps: float, order='linf',
+            loss_fn=None, 
+            nb_samples=100,
+            nb_iter=40,
+            tau=0.1,
+            alpha_init=0.4,
+            rho_init=0.5,
+            decay=0.9,
             clip_min=0., clip_max=1.,
-            alpha_min: float = 0.15,
-            rho_min: float = 0.1,
-            G_max: int = 20,
-            num_elites: int = 5,
-            targeted : bool = False
-            ):
-        """
-        Create an instance of the PGDAttack.
+            targeted : bool = False,
+            query_limit = None
+        ):
+        if loss_fn is not None:
+            import warnings
+            warnings.warn(
+                "This Attack currently do not support a different loss"
+                " function other than the default. Setting loss_fn manually"
+                " is not effective."
+            )
 
-        """
-        super().__init__(predict, loss_fn, clip_min, clip_max)
+        super().__init__(predict, gen_attack_score, clip_min, clip_max)
 
-        self.N = N
-        self.alpha_min = alpha_min
-        self.rho_min = rho_min
-        self.G_max = G_max
-        self.num_elites = num_elites
         self.eps = eps
+        self.order = order
+        self.nb_samples = nb_samples
+        self.nb_iter = nb_iter
         self.targeted = targeted
+
+        self.alpha_init = alpha_init
+        self.rho_init = rho_init
+        self.decay = decay
+        self.tau = tau
+
+        #If aiming for query efficiency, stop as soon as one adversarial
+        #example is found.  Set to False to continue iteration and find best
+        #adversarial example
+        self.query_limit = query_limit
 
     def perturb(  # type: ignore
         self,
@@ -110,310 +373,19 @@ class GeneticL2Attack(Attack, LabelMixin):
         :return: tensor containing perturbed inputs.
         """
         x, y = self._verify_and_process_inputs(x, y)
-        
-        if isinstance(self.eps, float):
-            eps = torch.FloatTensor([self.eps] * x.shape[0]).to(  # type: ignore
-                x.device
-            )
-        elif isinstance(self.eps, (np.ndarray, list)):
-            eps = torch.FloatTensor(self.eps).to(x.device)  # type: ignore
-        elif isinstance(self.eps, torch.Tensor):
-            eps = self.eps.to(x.device)  # type: ignore
 
-        else:
-            raise ValueError("Unknown linf_eps format.")
+        eps = _check_param(self.eps, x.new_full((x.shape[0],), 1), 'eps')
+        #[B, F]
+        clip_min = _check_param(self.clip_min, x, 'clip_min')
+        clip_max = _check_param(self.clip_max, x, 'clip_max')
 
-        if isinstance(self.clip_min, float):
-            clip_min = self.clip_min * torch.ones_like(x)
-        elif isinstance(self.clip_min, (np.ndarray, list)):
-            clip_min = torch.FloatTensor(self.clip_min).to(x.device)  # type: ignore
-        elif isinstance(self.clip_min, torch.Tensor):
-            clip_min = self.clip_min.to(x.device)  # type: ignore
-
-        else:
-            raise ValueError("Unknown clip_min format.")
-
-        if isinstance(self.clip_max, float):
-            clip_max = self.clip_max * torch.ones_like(x)
-        elif isinstance(self.clip_max, (np.ndarray, list)):
-            clip_max = torch.FloatTensor(self.clip_max).to(x.device)  # type: ignore
-        elif isinstance(self.clip_max, torch.Tensor):
-            clip_max = self.clip_max.to(x.device)  # type: ignore
-
-        else:
-            raise ValueError("Unknown clip_max format.")
-
-        #adv_ -> delta
-        adv_ex = []
-        success = []
-        G = []
-        for ind in tqdm(range(x.shape[0])):
-            adv_, succ, g = self._perturb_sample(
-                x[ind : ind + 1],  # noqa: E203
-                y[ind],
-                eps[ind].item(),
-                clip_min[ind : ind + 1],  # noqa: E203
-                clip_max[ind : ind + 1],  # noqa: E203
-                self.N,
-                self.alpha_min,
-                self.rho_min,
-                self.G_max,
-                self.num_elites,
-            )
-            G.append(g)
-            success.append(succ)
-            #adv_ = self.decode(adv_ + x[ind : ind + 1])  # noqa: E203
-            adv_ = (adv_ + x[ind : ind + 1])  # noqa: E203
-            adv_ex.append(adv_)
-
-        adv_ex = torch.FloatTensor(  # type: ignore
-            [xi.cpu().numpy()[0] for xi in adv_ex]
-        ).to(
-            x.device
+        elite_adv, pop_t, scheduler = gen_attack(
+            predict_fn=self.predict, loss_fn=self.loss_fn, x=x, y=y, 
+            eps=eps, clip_min=clip_min, clip_max=clip_max, 
+            nb_samples=self.nb_samples, nb_iter=self.nb_iter, tau=self.tau,
+            alpha_init=self.alpha_init, rho_init=self.rho_init, 
+            decay=self.decay, pop_init=None, scheduler=None, 
+            targeted=self.targeted
         )
 
-        return adv_ex, success, G
-
-    def _perturb_sample(
-        self,
-        X: torch.FloatTensor,
-        Y: torch.Tensor, #should be optional
-        linf_eps: float,
-        bmin: torch.Tensor,
-        bmax: torch.Tensor,
-        N: int,
-        alpha_min: float,
-        rho_min: float,
-        G_max: int,
-        num_elites: int,
-    ) -> Tuple[torch.Tensor, bool, int]:
-        """
-        Algo 1 from : https://arxiv.org/pdf/1805.11090.pdf
-        Used as a helper function in `generate_counterexamples`.
-        Runs the GenAttack for each sample. The input samples
-        should be encoded (ga.encode).
-
-        Args:
-            X: original encoded example
-            Y: true label
-            linf_eps: maximum distance
-            bmin: minimum bound for perturbed `x` (encoded).
-            bmax: maximum bound for perturbed `x` (encoded).
-            N : size of population.
-            alpha_min: min mutation range.
-            rho_min: min mutation probability.
-            G_max: # of generations.
-            num_elites: number of top members to keep for the next generation.
-
-        Returns:
-            torch.Tensor: the best adversarial example found by GenAttack.
-            bool:  if the attack is successful.
-            int: number of generations ran to find the adversarial example.
-        """
-        device = X.device
-
-        # initialize population
-        dims = list(X.size())
-        dims[0] = N
-
-        bmin_ = torch.cat(N * [bmin], dim=0)
-        bmax_ = torch.cat(N * [bmax], dim=0)
-
-        #this "population" corresponds to "delta"
-        population = torch.empty(dims, device=device).uniform_(-linf_eps, linf_eps)
-        population = batch_clamp(population + X, bmin_, bmax_) - X
-
-        # initialize variables used in while loop
-        count = 1  # Start with an initial population - so count starts as 1
-        crit = 1e-5
-        last_best = num_i = num_plat = 0
-        adv_attack = False
-        # Continue until max num. of iterations or get an adversarial example
-        while not adv_attack and count < G_max:
-            if count % 100 == 0:
-                print("Generation " + str(count))
-            # Find fitness for every individual and save the best fitness
-            fitness = self.fitness(population + X, Y)
-            best_fit = min(fitness)
-
-            # Check to if fitness last two generations is the same,
-            # update num_plat
-            if abs(best_fit - last_best) <= crit:
-                num_i += 1
-                if num_i % 100 == 0 and num_i != 0:
-                    print("Plateau at Generation " + str(count))
-                    num_plat += 1
-            else:
-                num_i = 0
-
-            # Get sorted indices (Ascending!)
-            _, sorted_inds = fitness.sort()
-            # Initialize new population by adding the elites
-            new_pop = torch.zeros_like(population)
-            for i in range(num_elites):
-                new_pop[i] = population[sorted_inds[i]]
-
-            # The best individual is the one with the best fitness
-            best = new_pop[0]
-
-            adv_attack = self.valid_attack(best + X, Y)
-
-            # If not a true adversarial example need to go to next generation
-            if not adv_attack:
-                alpha = max(alpha_min, 0.5 * (0.9 ** num_plat))
-                rho = max(rho_min, 0.4 * (0.9 ** num_plat))
-                # Softmax fitnesse
-                soft_fit = F.softmax(-fitness, dim=0)  # Negate fitness since we're trying to minimize
-                # need to get apply selection and get a new population
-                child_pop = self.selection(population, soft_fit, X, alpha, rho, linf_eps, num_elites, bmin, bmax)
-                new_pop[num_elites:] = child_pop
-                population = new_pop
-                count += 1
-                # Need to retain best fitness
-                last_best = best_fit
-
-        return best, adv_attack, count
-
-    def mutation_op(
-        self,
-        cur_pop: torch.Tensor,
-        x_orig: torch.Tensor,
-        alpha: float,
-        rho: float,
-        delta_max: float,
-        bmin: torch.Tensor,
-        bmax: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Perturbs the sample with random values to generate new population.
-
-        Args:
-            cur_pop: the current population
-            x_orig :  the image we are using for the attack
-            alpha: mutation range
-            rho: mutation probability
-            delta_max: maximum distance
-            bmin: minimum bound for perturbed `x` (encoded).
-            bmax: maximum bound for perturbed `x` (encoded).
-
-        Returns:
-            new population
-        """
-        step_noise = alpha * delta_max
-        perturb_noise = torch.empty_like(cur_pop).uniform_(-step_noise, step_noise)
-        mask = torch.empty_like(cur_pop).bernoulli_(rho)
-        mutated_pop = perturb_noise * mask + cur_pop
-        bmin_ = torch.cat(cur_pop.shape[0] * [bmin], dim=0)
-        bmax_ = torch.cat(cur_pop.shape[0] * [bmax], dim=0)
-
-        try:
-            clamped_mutation_pop = batch_clamp(mutated_pop + x_orig, bmin_, bmax_) - x_orig
-        except AssertionError:
-            import ipdb; ipdb.set_trace()
-        normalized_pop = torch.clamp(clamped_mutation_pop, -delta_max, delta_max)
-        return normalized_pop
-
-    def fitness(self, batch: torch.Tensor, target_class: torch.Tensor):
-        """
-        The objective function to be solved.
-
-        This source code is inspired by:
-        https://github.com/nesl/adversarial_genattack/blob/
-        2304cdc2a49d2c16b9f43821ad8a29d664f334d1/genattack_tf2.py#L39
-
-        Args:
-            batch: a batch of examples
-            target_class: the class label of x (as an integer)
-
-        Returns:
-            Tensor of fitness
-        """
-        with torch.no_grad():
-            probs = self.predict(batch)
-            log_probs = torch.log(probs)
-            s = 1.0 - probs[:, target_class]
-            f = log_probs[:, target_class] - torch.log(s)
-            f = torch.clamp(f.flatten(), -1000, 1000)  # clamping to avoid the "all inf" problem
-
-            if self.targeted:
-                f = -f
-            return f
-
-    def selection(
-        self, population, soft_fit, data, alpha, rho, delta_max, num_elite, bmin, bmax,
-    ):
-        """
-        Runs the crossover and permutation to generate a new generation.
-
-        Args:
-            population: the population of individuals
-            soft_fit: the softmax of the fitness
-            data: the input value to find a perturbation for
-            alpha: mutation range
-            rho: mutation probability
-            num_elite: the number of elites to carry on from the previous
-                generations
-
-        Returns:
-            mut_child_pop: Returns the mutated population of children
-        """
-
-        # Crossover
-        cdims = list(population.size())
-        child_pop_size = population.size()[0] - num_elite
-        cdims[0] = child_pop_size
-        child_pop = torch.empty(cdims, device=data.device)
-        # Roulette
-        roulette = Categorical(probs=soft_fit)
-        for i in range(child_pop_size):
-            parent1_idx = roulette.sample()
-            soft_fit_nop1 = soft_fit.clone() + 0.0001  # Incrementing by epsilon to avoid the "all zeros" problem
-            soft_fit_nop1[parent1_idx] = 0
-            roulette2 = Categorical(probs=soft_fit_nop1)
-            parent2_idx = roulette2.sample()
-            child = self.crossover(
-                population[parent1_idx], population[parent2_idx], soft_fit[parent1_idx], soft_fit[parent2_idx],
-            )
-            child_pop[i] = child
-
-        # Mutation
-        mut_child_pop = self.mutation_op(child_pop, data, alpha, rho, delta_max, bmin, bmax)
-
-        return mut_child_pop
-
-    def crossover(
-        self, parent1: torch.Tensor, parent2: torch.Tensor, p1: torch.Tensor, p2: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Element-wise crossover
-
-        Args:
-            parent1: individual in old population
-            parent2: individual in old population
-            p1: softmaxed fitness for parent1
-            p2: softmaxed fitness for parent2
-
-        Returns:
-            child: new individual from mating of parents
-        """
-        p = p1 / (p1 + p2)
-        mask = torch.empty_like(parent1).bernoulli_(p)
-        child = mask * parent1 + (1 - mask) * parent2  # type: ignore
-        return child
-
-    def valid_attack(self, data: torch.Tensor, t: torch.Tensor) -> bool:
-        """
-        Args:
-            data: perturbation + original sample
-            t: true class label
-        Returns:
-            adv_attack: Whether the new sample is an adversarial attack
-        """
-        #TODO: should change this based on targeted/untargeted
-        adv_attack = False
-        t_out = self.predict(data)
-        t_pred = t_out.argmax(dim=1, keepdim=True)
-        if t != t_pred:
-            adv_attack = True
-
-        return adv_attack
+        return elite_adv
