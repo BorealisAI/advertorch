@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import collections
 
 
 def torch_allclose(x, y, rtol=1.e-5, atol=1.e-8):
@@ -389,3 +390,13 @@ def set_seed(seed=None):
         torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
+
+
+def zero_gradients(x):
+    if isinstance(x, torch.Tensor):
+        if x.grad is not None:
+            x.grad.detach_()
+            x.grad.zero_()
+    elif isinstance(x, collections.abc.Iterable):
+        for elem in x:
+            zero_gradients(elem)

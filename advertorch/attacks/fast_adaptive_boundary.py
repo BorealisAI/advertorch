@@ -11,8 +11,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import torch
-from torch.autograd.gradcheck import zero_gradients
 import time
+from advertorch.utils import zero_gradients
 
 try:
     from torch import flip
