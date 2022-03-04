@@ -94,6 +94,7 @@ class FDWrapper(GradientWrapper):
 
 
 class NESWrapper(GradientWrapper):
+    #NES Attack: https://arxiv.org/pdf/1804.08598.pdf
     def __init__(self, func, nb_samples, fd_eta=1e-3):
         super().__init__(func)
         self.nb_samples = nb_samples

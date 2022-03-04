@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch.distributions.categorical import Categorical
 from tqdm import tqdm
 
 from advertorch.attacks.base import Attack
@@ -16,37 +15,63 @@ from advertorch.utils import clamp
 from .utils import _check_param
 
 def eg_step(x, g, lr):
-    real_x = (x + 1)/2 # from [-1, 1] to [0, 1]
-    pos = real_x*torch.exp(lr*g)
-    neg = (1-real_x)*torch.exp(-lr*g)
-    new_x = pos/(pos+neg)
+    #exponentiated gradients
+    real_x = (x + 1) / 2 # from [-1, 1] to [0, 1]
+    pos = real_x * torch.exp(lr*g)
+    neg = (1 - real_x) * torch.exp(-lr * g)
+    new_x = pos / (pos+neg)
     return new_x*2-1
 
-
-def norm(x):
-    return torch.sqrt( (x ** 2).sum(-1))
-
 def gd_prior_step(x, g, lr):
-    return x + lr*g
+    # regular gradient descent
+    return x + lr * g
 
 def l2_data_step(x, g, lr):
-    return x + lr*F.normalize(g, dim=-1)
+    """
+    performs l2 step of x in the direction of g, where the norm is computed
+    across all the dimensions except the first one (assuming it's the batch_size)
+
+    Args:
+        x: batch_size x dim x .. tensor 
+        g: batch_size x dim x .. tensor 
+        lr: learning rate (step size)
+    """
+    return x + lr * F.normalize(g, dim=-1)
 
 def linf_step(x, g, lr):
-    return x + lr*torch.sign(g)
+    """
+    performs linfinity step of x in the direction of g
 
-def l2_proj(image, eps):
-    orig = image.clone()
+    Args:
+        x: batch_size x dim x .. tensor 
+        g: batch_size x dim x .. tensor 
+        lr: learning rate (step size)
+    """
+    return x + lr * torch.sign(g)
+
+#TODO: rename image -> x
+#TODO: there must be some copyright here?
+def l2_proj(x, eps):
+    """
+    makes an l2 projection function such that new points
+    are projected within the eps l2-balls centered around xs
+    """
+    orig = x.clone()
     def proj(new_x):
         delta = new_x - orig
-        out_of_bounds_mask = (norm(delta) > eps).float().unsqueeze(-1)
-        x = (orig + eps[:, None] * F.normalize(delta, dim=-1))*out_of_bounds_mask
-        x += new_x*(1-out_of_bounds_mask)
-        return x
+        norms = torch.sqrt( (delta ** 2).sum(-1))
+        out_of_bounds_mask = (norms > eps).float().unsqueeze(-1)
+        out = (orig + eps[:, None] * F.normalize(delta, dim=-1))*out_of_bounds_mask
+        out += new_x*(1-out_of_bounds_mask)
+        return out
     return proj
 
-def linf_proj(image, eps):
-    orig = image.clone()
+def linf_proj(x, eps):
+    """
+    makes an linf projection function such that new points
+    are projected within the eps linf-balls centered around xs
+    """
+    orig = x.clone()
     def proj(new_x):
         delta = torch.minimum(new_x - orig, eps[:, None])
         delta = torch.maximum(delta, -eps[:, None])
@@ -98,7 +123,7 @@ def bandit_attack(
         adv = proj_step(adv)
     
         #TODO: check this clamping is correct
-
+        #TODO: clamping inside or outside of the loop?
         adv = torch.maximum(adv, clip_min)
         adv = torch.minimum(adv, clip_max)
 
