@@ -12,53 +12,10 @@ from .utils import _check_param
 
 from advertorch.utils import to_one_hot
 
-# nb_samples = 300     # population size
-# sigma = 0.1    # noise standard deviation
-# alpha = 0.02  # learning rate
-# # alpha = 0.001  # learning rate
-# boxmin = 0
-# boxmax = 1
-# shift = (boxmin + boxmax) / 2. # 1/2 ... rescale based on clip_min, clip_max ... rename to shift
-# scale = (boxmax - boxmin) / 2. # 1/2 ... rename to scale
-
-#scale = (clip_max - clip_min) / 2
-#shift = (clip_max + clip_min) / 2
-
-#epsi = 0.031
-#epsilon = 1e-30 #numerical safety factor (buffer)
-
-def torch_arctanh(x, eps=1e-6):
-    x *= (1. - eps)
-    return (np.log((1 + x) / (1 - x))) * 0.5
-
-def encode_normal(z):
-    return scale * np.tanh(z) + shift
-
-def decode_input(x):
-    return torch_arctanh((x - shift) / scale)
-
-def l2_proj(image, eps):
-    orig = image.clone()
-    def proj(new_x):
-        delta = new_x - orig
-        out_of_bounds_mask = (norm(delta) > eps).float()
-        x = (orig + eps*delta/norm(delta))*out_of_bounds_mask
-        x += new_x*(1-out_of_bounds_mask)
-        return x
-    return proj
-
-def linf_proj(image, eps):
-    orig = image.clone()
-    def proj(new_x):
-        return orig + torch.clamp(new_x - orig, -eps, eps)
-    return proj
-
-
 def sample_clamp(x, clip_min, clip_max):
     new_x = torch.maximum(x, clip_min[:, None, :])
     new_x = torch.minimum(new_x, clip_max[:, None, :])
     return new_x
-
 
 def cw_log_loss(output, target, targeted=False, buff=1e-30):
     """
@@ -110,9 +67,6 @@ def select_best_example(x_orig, x_adv, order, losses, success):
     best_adv = torch.gather(x_adv, dim=1, index=best_loss_ind )
     return best_adv.squeeze(1)
     #return x_adv[:, best_loss_ind, :]
-
-#TODO: Make classes for Linf, L2, ...
-#TODO: accept custom losses
 
 def n_attack(
         predict_fn, loss_fn, x, y, order, eps, clip_min, clip_max,
@@ -225,7 +179,6 @@ class NAttack(Attack, LabelMixin):
 
         #Reference:
         #https://github.com/Cold-Winter/Nattack/blob/master/therm-adv/re_li_attack_notanh.py
-        #TODO: tanh?
 
     def perturb(self, x, y, mu_init=None):
         #[B, F]

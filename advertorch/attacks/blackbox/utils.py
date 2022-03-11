@@ -1,6 +1,7 @@
 import numpy as np
 
 import torch
+import torch.nn as nn
 
 def _check_param(param, x, name):
     if isinstance(param, (bool, int, float)):
@@ -13,17 +14,3 @@ def _check_param(param, x, name):
         raise ValueError("Unknown format for {}".format(name))
 
     return new_param
-
-def track_stats():
-    pass
-
-def partial_perturb():
-    #limit_queries=False
-    #batchify:
-    #dones = zeros()
-    #old_adv = zeros()
-    #current = x[~dones]
-    #current_adv = step(current, ...)
-    #old_adv[~dones] = current_adv
-    #dones = check(...)
-    pass

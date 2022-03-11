@@ -10,7 +10,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -18,25 +17,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torch.distributions.categorical import Categorical
-from tqdm import tqdm
-
 from advertorch.attacks.base import Attack
 from advertorch.attacks.base import LabelMixin
-from advertorch.attacks.utils import is_successful, rand_init_delta
 
-#from advertorch.utils import clamp
 from advertorch.utils import normalize_by_pnorm
 from advertorch.utils import clamp_by_pnorm
 from advertorch.utils import is_float_or_torch_tensor
 from advertorch.utils import batch_multiply
-from .utils import _check_param
-
-#TODO: rename this import, it is wrong.
-#TODO: difference between linf_eps and clip_min/clip_max
-#TODO: remove tqdm and all print statements
 from advertorch.utils import clamp as batch_clamp
 from advertorch.utils import replicate_input
+
+from .utils import _check_param
 
 RHOMIN = 0.1
 ALPHAMIN = 0.15
@@ -70,9 +61,6 @@ def compute_fitness(predict_fn, loss_fn, adv_pop, y, targeted=False):
     Returns:
         Tensor of fitness (shape: n_batch)
     """
-    #OBSERVE / TODO:
-    #GenAttack does not require a transform_fn, since it operates on the 
-    #probs directly
 
     #population shape: [B, N, F]
     n_batch, n_samples, n_dim = adv_pop.shape
@@ -151,11 +139,8 @@ def mutation(pop_t, alpha, rho, eps):
 
     return pop_t + mask * perturb_noise
 
-#TODO: account for other projections
 def linf_project(pop_t, x, eps, clip_min, clip_max):    
     delta = sample_clamp(pop_t, -eps[:, None], eps[:, None])
-    #mutated_pop = x[:, None, :] + delta
-    #mutated_pop = sample_clamp(mutated_pop, clip_min, clip_max)
     delta = sample_clamp(x[:, None, :] + delta, clip_min, clip_max
         ) - x[:, None, :]
 
@@ -176,8 +161,7 @@ class GenAttackScheduler():
         self.alpha_min = ALPHAMIN * torch.ones(n_batch).to(x.device)
 
         self.zeros = torch.zeros_like(self.num_i)
-
-        #check alpha, rho
+        
         self.alpha_init = alpha_init
         self.rho_init = rho_init
         self.decay = decay
@@ -373,11 +357,14 @@ class GeneticLinfAttack(Attack, LabelMixin):
         :return: tensor containing perturbed inputs.
         """
         x, y = self._verify_and_process_inputs(x, y)
+        #TODO: flatten x
 
         eps = _check_param(self.eps, x.new_full((x.shape[0],), 1), 'eps')
         #[B, F]
         clip_min = _check_param(self.clip_min, x, 'clip_min')
         clip_max = _check_param(self.clip_max, x, 'clip_max')
+
+        #TODO: change predict_fn and loss_fn to accept reshaped inputs
 
         elite_adv, pop_t, scheduler = gen_attack(
             predict_fn=self.predict, loss_fn=self.loss_fn, x=x, y=y, 
@@ -387,5 +374,8 @@ class GeneticLinfAttack(Attack, LabelMixin):
             decay=self.decay, pop_init=None, scheduler=None, 
             targeted=self.targeted
         )
+
+
+        #TODO: reshape the final adv
 
         return elite_adv

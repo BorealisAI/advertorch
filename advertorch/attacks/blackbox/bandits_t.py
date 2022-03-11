@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
 
 import numpy as np
 
@@ -14,76 +14,29 @@ from advertorch.utils import clamp
 
 from .utils import _check_param
 
-def eg_step(x, g, lr):
-    #exponentiated gradients
-    real_x = (x + 1) / 2 # from [-1, 1] to [0, 1]
-    pos = real_x * torch.exp(lr*g)
-    neg = (1 - real_x) * torch.exp(-lr * g)
-    new_x = pos / (pos+neg)
-    return new_x*2-1
-
-def gd_prior_step(x, g, lr):
-    # regular gradient descent
-    return x + lr * g
-
-def l2_data_step(x, g, lr):
-    """
-    performs l2 step of x in the direction of g, where the norm is computed
-    across all the dimensions except the first one (assuming it's the batch_size)
-
-    Args:
-        x: batch_size x dim x .. tensor 
-        g: batch_size x dim x .. tensor 
-        lr: learning rate (step size)
-    """
-    return x + lr * F.normalize(g, dim=-1)
-
-def linf_step(x, g, lr):
-    """
-    performs linfinity step of x in the direction of g
-
-    Args:
-        x: batch_size x dim x .. tensor 
-        g: batch_size x dim x .. tensor 
-        lr: learning rate (step size)
-    """
-    return x + lr * torch.sign(g)
-
-#TODO: rename image -> x
-#TODO: there must be some copyright here?
-def l2_proj(x, eps):
-    """
-    makes an l2 projection function such that new points
-    are projected within the eps l2-balls centered around xs
-    """
-    orig = x.clone()
-    def proj(new_x):
-        delta = new_x - orig
-        norms = torch.sqrt( (delta ** 2).sum(-1))
-        out_of_bounds_mask = (norms > eps).float().unsqueeze(-1)
-        out = (orig + eps[:, None] * F.normalize(delta, dim=-1))*out_of_bounds_mask
-        out += new_x*(1-out_of_bounds_mask)
-        return out
-    return proj
-
-def linf_proj(x, eps):
-    """
-    makes an linf projection function such that new points
-    are projected within the eps linf-balls centered around xs
-    """
-    orig = x.clone()
-    def proj(new_x):
-        delta = torch.minimum(new_x - orig, eps[:, None])
-        delta = torch.maximum(delta, -eps[:, None])
-        return orig + delta
-    return proj
-
-
 def bandit_attack(
-        x, y, loss_fn, prior_step, data_step, proj_step, clip_min, clip_max, 
-        delta_init=None, prior_init=None, fd_eta=0.01, exploration=0.01, online_lr=0.1, nb_iter=40,
-        eps_iter=0.01,
+        x, loss_fn, eps, clip_min, clip_max, order='l2',
+        delta_init=None, prior_init=None, fd_eta=0.01, exploration=0.01, 
+        online_lr=0.1, nb_iter=40, eps_iter=0.01
     ):
+    """
+    Performs the BanditAttack
+    Paper: https://arxiv.org/pdf/1807.07978.pdf
+
+    :param x: input data.
+    :param loss_fn: loss function.
+    :param eps: maximum distortion.
+    :param order: (optional) the order of maximum distortion ('linf' or 'l2').
+    :param clip_min: mininum value per input dimension (default 0.)
+    :param clip_max: mininum value per input dimension (default 1.)
+    :param delta_init: (default None)
+    :param prior_init: (default None)
+    :param fd_eta: step-size used for finite difference grad estimate (default 0.01)
+    :param exploration: scales the exploration around prior (default 0.01)
+    :param online_lr: learning rate for the prior (default 0.1)
+    :param nb_iter: number of iterations (default 40)
+    :param eps_iter: attack step size (default 0.01)
+    """
     #if so, we could just use the same estimate grad
     ndim = np.prod(list(x.shape[1:]))
     #The idea of this is that the gradient becomes more accurate as we
@@ -116,21 +69,58 @@ def bandit_attack(
         delta_L = (L1 - L2)/(fd_eta * exploration) #[nbatch]
         
         grad_est = delta_L * exp_noise
-
-        prior = prior_step(prior, grad_est, online_lr)
-        #upsampler(prior*correct_classified_mask.view(-1, 1, 1, 1))
-        adv = data_step(adv, prior, eps_iter)
-        adv = proj_step(adv)
-    
-        #TODO: check this clamping is correct
-        #TODO: clamping inside or outside of the loop?
+        if order == 'l2':
+            #update prior
+            prior = prior + online_lr * grad_est
+            #make step with prior
+            adv = adv + eps_iter * F.normalize(prior, dim=-1)
+            #project
+            delta = adv - x
+            norms = torch.sqrt( (delta ** 2).sum(-1))
+            out_of_bounds_mask = (norms > eps).float().unsqueeze(-1)
+            #if out_of_bounds, use the clipped values
+            clipped = (x + eps[:, None] * F.normalize(delta, dim=-1))
+            adv = clipped * out_of_bounds_mask + adv * (1 - out_of_bounds_mask)
+        elif order == 'linf':
+            #update prior (exponentiated gradients)
+            prior = (prior + 1) / 2 # from [-1, 1] to [0, 1]
+            pos = prior * torch.exp(online_lr * grad_est)
+            neg = (1 - prior) * torch.exp(-online_lr * grad_est)
+            prior = 2 * pos / (pos + neg) - 1
+            #make step with prior
+            adv = adv + eps_iter * torch.sign(prior)
+            #project
+            delta = torch.minimum(adv - x, eps[:, None])
+            delta = torch.maximum(delta, -eps[:, None])
+            adv = x + delta
+        else:
+            error = "Only order = 'linf', order = 'l2' have been implemented"
+            raise NotImplementedError(error)
+        
         adv = torch.maximum(adv, clip_min)
         adv = torch.minimum(adv, clip_max)
 
     return adv, prior
 
-#https://github.com/MadryLab/blackbox-bandits/blob/master/src/main.py
 class BanditAttack(Attack, LabelMixin):
+    """
+    Implementation of "Prior Convictions"
+    Paper: https://arxiv.org/pdf/1807.07978.pdf
+    Original implementation here: https://github.com/MadryLab/blackbox-bandits
+    
+    :param predict: forward pass function.
+    :param eps: maximum distortion.
+    :param order: the order of maximum distortion ('linf' or 'l2', default l2)
+    :param fd_eta: step-size used for finite difference grad estimate (default 0.01)
+    :param exploration: scales the exploration around prior (default 0.01)
+    :param online_lr: learning rate for the prior (default 0.1)
+    :param loss_fn: loss function
+    :param nb_iter: number of iterations (default 40)
+    :param eps_iter: attack step size (default 0.01)
+    :param clip_min: mininum value per input dimension (default 0.)
+    :param clip_max: mininum value per input dimension (default 1.)
+    :param targeted:bool: if the attack is targeted (default False)
+    """
     def __init__(
             self, predict, eps: float, order,
             fd_eta=0.01, exploration=0.01, online_lr=0.1,
@@ -138,33 +128,25 @@ class BanditAttack(Attack, LabelMixin):
             nb_iter=40,
             eps_iter=0.01,
             clip_min=0., clip_max=1.,
-            targeted : bool = False,
-            query_limit=None
+            targeted : bool = False
             ):
-
         super().__init__(predict, loss_fn, clip_min, clip_max)
 
         self.eps = eps
+        self.order = order
         self.fd_eta = fd_eta
         self.exploration = exploration
         self.online_lr = online_lr
-        self.prior_step = gd_prior_step if order == 'l2' else eg_step
         self.targeted = targeted
 
         self.nb_iter = nb_iter
         self.eps_iter = eps_iter
 
-        self.data_step = l2_data_step if order == 'l2' else linf_step
-
-        self.proj_maker = l2_proj if order == 'l2' else linf_proj
-
-        self.query_limit = None
-
     def perturb(  # type: ignore
         self,
         x: torch.FloatTensor,
-        y: torch.Tensor
-    ) -> Tuple[List[torch.Tensor], List[bool], List[int]]:
+        y: Optional[torch.Tensor]=None
+    ) -> torch.FloatTensor:
         """
         Given examples (x, y), returns their adversarial counterparts with
         an attack length of eps.
@@ -177,32 +159,27 @@ class BanditAttack(Attack, LabelMixin):
         :return: tensor containing perturbed inputs.
         """
         x, y = self._verify_and_process_inputs(x, y)
+        #TODO: flat_x = ...
 
+        #check_param against flat_x
         eps = _check_param(self.eps, x.new_full((x.shape[0],), 1), 'eps')
         clip_min = _check_param(self.clip_min, x, 'clip_min')
         clip_max = _check_param(self.clip_max, x, 'clip_max')
-        #sample using mean param
-        #possibly, this would mean NESWrapper has a normal distribution
-        #as a param
-        
-        #TODO: (1) adapt for multiple outputs
-        #TODO: (2) test
-        #TODO: (3) figure out better way of "storing" prior?
-        # ... BANDIT IS NOT A TYPE OF GRADIENT ESTIMATOR
-        # ... there is a dual optimization problem
 
+        scale = -1 if self.targeted else 1
         def L(x): #loss func
+            #TODO: add in the reshape part here
             output = self.predict(x)
-            loss = self.loss_fn(output, y)
+            #TODO: is this targeted?  Should account for that...
+            loss = scale * self.loss_fn(output, y)
             return loss
 
-        proj_step = self.proj_maker(x, eps)
-
-        adv, prior = bandit_attack(
-            x, y, loss_fn=L, prior_step=self.prior_step, data_step=self.data_step, 
-            proj_step=proj_step, clip_min=clip_min, clip_max=clip_max, 
-            delta_init=None, prior_init=None,  fd_eta=self.fd_eta, exploration=self.exploration,
-            online_lr=self.online_lr, nb_iter=self.nb_iter, eps_iter=self.eps_iter
+        adv, _ = bandit_attack(
+            x, loss_fn=L, eps=eps, order=self.order, clip_min=clip_min,
+            clip_max=clip_max, delta_init=None, prior_init=None,
+            fd_eta=self.fd_eta, exploration=self.exploration, 
+            online_lr=self.online_lr, nb_iter=self.nb_iter, 
+            eps_iter=self.eps_iter
         )
         
         return adv
