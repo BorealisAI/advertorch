@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union, Optional
+from typing import Optional
 
 import numpy as np
 
@@ -6,13 +6,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tqdm import tqdm
-
 from advertorch.attacks.base import Attack
 from advertorch.attacks.base import LabelMixin
-from advertorch.utils import clamp
 
-from .utils import _check_param
+from advertorch.attacks.blackbox.utils import _check_param, _flatten
 
 def bandit_attack(
         x, loss_fn, eps, clip_min, clip_max, order='l2',
@@ -36,6 +33,8 @@ def bandit_attack(
     :param online_lr: learning rate for the prior (default 0.1)
     :param nb_iter: number of iterations (default 40)
     :param eps_iter: attack step size (default 0.01)
+
+    :return: tuple of tensors containing (1) the adv example, (2) the prior
     """
     #if so, we could just use the same estimate grad
     ndim = np.prod(list(x.shape[1:]))
@@ -73,6 +72,7 @@ def bandit_attack(
             #update prior
             prior = prior + online_lr * grad_est
             #make step with prior
+            #note the (+): this indicates gradient ascent on the loss
             adv = adv + eps_iter * F.normalize(prior, dim=-1)
             #project
             delta = adv - x
@@ -114,7 +114,7 @@ class BanditAttack(Attack, LabelMixin):
     :param fd_eta: step-size used for finite difference grad estimate (default 0.01)
     :param exploration: scales the exploration around prior (default 0.01)
     :param online_lr: learning rate for the prior (default 0.1)
-    :param loss_fn: loss function
+    :param loss_fn: loss function, defaults to CrossEntropyLoss
     :param nb_iter: number of iterations (default 40)
     :param eps_iter: attack step size (default 0.01)
     :param clip_min: mininum value per input dimension (default 0.)
@@ -138,6 +138,8 @@ class BanditAttack(Attack, LabelMixin):
         self.exploration = exploration
         self.online_lr = online_lr
         self.targeted = targeted
+        if self.loss_fn is None:
+            self.loss_fn = nn.CrossEntropyLoss(reduction="sum")
 
         self.nb_iter = nb_iter
         self.eps_iter = eps_iter
@@ -159,28 +161,28 @@ class BanditAttack(Attack, LabelMixin):
         :return: tensor containing perturbed inputs.
         """
         x, y = self._verify_and_process_inputs(x, y)
-        #TODO: flat_x = ...
-
-        #check_param against flat_x
+        shape, flat_x = _flatten(x)
+        
         eps = _check_param(self.eps, x.new_full((x.shape[0],), 1), 'eps')
-        clip_min = _check_param(self.clip_min, x, 'clip_min')
-        clip_max = _check_param(self.clip_max, x, 'clip_max')
+        clip_min = _check_param(self.clip_min, flat_x, 'clip_min')
+        clip_max = _check_param(self.clip_max, flat_x, 'clip_max')
 
         scale = -1 if self.targeted else 1
         def L(x): #loss func
-            #TODO: add in the reshape part here
-            output = self.predict(x)
-            #TODO: is this targeted?  Should account for that...
+            input = x.reshape(shape)
+            output = self.predict(input)
             loss = scale * self.loss_fn(output, y)
             return loss
 
         adv, _ = bandit_attack(
-            x, loss_fn=L, eps=eps, order=self.order, clip_min=clip_min,
+            flat_x, loss_fn=L, eps=eps, order=self.order, clip_min=clip_min,
             clip_max=clip_max, delta_init=None, prior_init=None,
             fd_eta=self.fd_eta, exploration=self.exploration, 
             online_lr=self.online_lr, nb_iter=self.nb_iter, 
             eps_iter=self.eps_iter
         )
+
+        adv = adv.reshape(shape)
         
         return adv
         

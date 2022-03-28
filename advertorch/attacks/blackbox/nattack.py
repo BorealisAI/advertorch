@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from advertorch.attacks.base import Attack
 from advertorch.attacks.base import LabelMixin
 
-from .utils import _check_param
+from .utils import _check_param, _flatten
 
 from advertorch.utils import to_one_hot
 
@@ -17,7 +17,7 @@ def sample_clamp(x, clip_min, clip_max):
     new_x = torch.minimum(new_x, clip_max[:, None, :])
     return new_x
 
-def cw_log_loss(output, target, targeted=False, buff=1e-30):
+def cw_log_loss(output, target, targeted=False, buff=1e-5):
     """
     :param outputs: pre-softmax/logits.
     :param target: true labels.
@@ -89,22 +89,29 @@ def n_attack(
         #[B, N, F]
         gauss_samples = torch.FloatTensor(n_batch, nb_samples, n_dim).normal_()
         gauss_samples = gauss_samples.to(x.device)
+        #print('samples nan?', torch.isnan(gauss_samples).any())
 
         #Compute gi = g(mu_t + sigma * samples)
         #[B, N, F]
         mu_samples = mu_t[:, None, :] + sigma * gauss_samples
+        #print('mu_samples nan?', torch.isnan(mu_samples).any())
 
         #linf proj
         #[B, N, F]
+        #TODO: change order...? l2 project?
         delta = sample_clamp(mu_samples, -eps[:, None], eps[:, None])
+        #print('delta nan?', torch.isnan(delta).any())
         adv = x[:, None, :] + delta
+        #print('adv nan?', torch.isnan(adv).any())
         adv = sample_clamp(adv, clip_min, clip_max)
+        #print('clamp nan?', torch.isnan(adv).any())
         
         #shouldn't this go earlier?
         #[B * N, F]
         adv = adv.reshape(-1, n_dim)
         #[B * N, C]
         outputs = predict_fn(adv)
+        #print('outputs?', torch.isnan(adv).any())
         #TODO: check that nothing is jumbled up
 
         #[B * N]
@@ -122,6 +129,7 @@ def n_attack(
 
         #[B * N]
         losses = loss_fn(outputs, y_repeat, targeted=targeted)
+        #print('losses nan?', torch.isnan(losses).any())
         #[B, N]
         losses = losses.reshape(n_batch, nb_samples)
         
@@ -129,11 +137,15 @@ def n_attack(
         #z_score = (losses - np.mean(losses)) / (np.std(losses) + 1e-7)
         #[B, N]
         z_score = (losses - losses.mean(1)[:, None]) / (losses.std(1)[:, None] + 1e-7)
+        #print('z_score nan?', torch.isnan(z_score).any())
 
         #mu_t: [B, F]
         #gauss_samples : [B,N,F]
         #z_score: [B,N]
         mu_t = mu_t + (eps_iter/(nb_samples*sigma)) * (z_score[:, :, None] * gauss_samples).sum(1)
+        #print('mu_t nan?', torch.isnan(mu_t).any())
+
+        #print('-' * 40)
 
         #TODO: should losses be increasing or decreasing?
 
@@ -150,8 +162,7 @@ class NAttack(Attack, LabelMixin):
             eps_iter=0.02,
             sigma=0.1,
             clip_min=0., clip_max=1.,
-            targeted : bool = False,
-            query_limit = None
+            targeted : bool = False
             ):
 
         if loss_fn is not None:
@@ -171,36 +182,37 @@ class NAttack(Attack, LabelMixin):
         self.sigma = sigma
         self.targeted = targeted
 
-        #If aiming for query efficiency, stop as soon as one adversarial
-        #example is found.  Set to False to continue iteration and find best
-        #adversarial example
-        self.query_limit = query_limit
-
-
         #Reference:
         #https://github.com/Cold-Winter/Nattack/blob/master/therm-adv/re_li_attack_notanh.py
 
     def perturb(self, x, y, mu_init=None):
         #[B, F]
         x, y = self._verify_and_process_inputs(x, y)
-
-        n_batch, n_dim = x.shape
+        shape, flat_x = _flatten(x)
+        data_shape = tuple(shape[1:])
+        n_batch, n_dim = flat_x.shape
 
         #[B]
         eps = _check_param(self.eps, x.new_full((x.shape[0],), 1), 'eps')
         #[B, F]
-        clip_min = _check_param(self.clip_min, x, 'clip_min')
-        clip_max = _check_param(self.clip_max, x, 'clip_max')
+        clip_min = _check_param(self.clip_min, flat_x, 'clip_min')
+        clip_max = _check_param(self.clip_max, flat_x, 'clip_max')
 
-        adv, mu_t, losses, success_mask = n_attack(
-            predict_fn=self.predict, loss_fn=self.loss_fn, x=x, y=y, order=self.order, 
+        def f(x):
+            new_shape = (x.shape[0],) + data_shape
+            input = x.reshape(new_shape)
+            return self.predict(input)
+
+        adv, _, losses, success_mask = n_attack(
+            predict_fn=f, loss_fn=self.loss_fn, x=flat_x, y=y, order=self.order, 
             eps=eps, clip_min=clip_min, clip_max=clip_max,
             mu_init=None, nb_samples=self.nb_samples, nb_iter=self.nb_iter, 
             eps_iter=self.eps_iter, sigma=self.sigma, targeted=self.targeted
         )
 
-        adv = select_best_example(x, adv, self.order, losses, success_mask)
+        #return flat_x, adv, self.order, losses, success_mask
+
+        adv = select_best_example(flat_x, adv, self.order, losses, success_mask)
+        adv = adv.reshape(shape)
 
         return adv
-
-        

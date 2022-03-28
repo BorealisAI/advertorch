@@ -51,7 +51,10 @@ from .fast_adaptive_boundary import L1FABAttack
 
 from .utils import ChooseBestAttack
 
-from .blackbox.gen_attack import GeneticLinfAttack
+from .blackbox.gen_attack import GenAttack
+from .blackbox.gen_attack import LinfGenAttack
+from .blackbox.gen_attack import L2GenAttack
+
 from .blackbox.grad_estimators import FDWrapper, NESWrapper
 from .blackbox.nattack import NAttack
 from .blackbox.bandits_t import BanditAttack
