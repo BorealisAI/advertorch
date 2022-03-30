@@ -106,6 +106,12 @@ def selection(pop_t, fitness, tau):
     return crossover(parent1, parent2, crossover_prob)
 
 def mutation(pop_t, alpha, rho, eps):
+    """
+    Add random noise to the population to explore the search space.
+
+    Alpha controls the scale of the noise, rho controls the number of features
+    that are perturbed.
+    """
     #alpha and eps both have shape [B]
     perturb_noise = (2 * torch.rand(*pop_t.shape) - 1)
     perturb_noise = perturb_noise * alpha[:, None, None] * eps[:, None, None]
@@ -165,10 +171,38 @@ class GenAttackScheduler():
         self.best_val = torch.maximum(elite_val, self.best_val)
 
 
-def gen_attack(predict_fn, loss_fn, x, y, eps, projector, nb_samples, nb_iter, tau=0.1, 
-        alpha_init=0.4, rho_init=0.5, decay=0.9, pop_init=None, scheduler=None, targeted=False
+def gen_attack(
+        predict_fn, loss_fn, x, y, eps, projector, nb_samples=100, nb_iter=40,
+        tau=0.1, alpha_init=0.4, rho_init=0.5, decay=0.9, 
+        pop_init=None, scheduler=None, targeted=False
     ):
+    """
+    Use a genetic algorithm to iteratively maximize the loss over the input,
+    while staying within eps of the original input (using a projector).
+    
+    Used as part of GenAttack.
 
+    :param predict: forward pass function.
+    :param loss_fn: loss function
+        - must accept tensors of shape [nbatch, pop_size, ndim]
+    :param x: input tensor.
+    :param y: label tensor.
+        - if None and self.targeted=False, compute y as predicted
+        labels.
+        - if self.targeted=True, then y must be the targeted labels.
+    :param eps: maximum distortion.
+    :param projector: function to project the perturbation into the eps-ball
+        - must accept tensors of shape [nbatch, pop_size, ndim]
+    :param nb_samples: population size (default 100)
+    :param nb_iter: number of iterations (default 40)
+    :param tau: sampling temperature (default 0.1)
+    :param alpha_init: initial mutation range (default 0.4)
+    :param rho_init: initial probability for mutation (default 0.5)
+    :param decay: decay param for scheduler (default 0.9)
+    :param pop_init: initial population for genetic alg (default None)
+    :param scheduler: initial state of scheduler(default None)
+    :param targeted: if the attack is targeted (default False)
+    """
     n_batch, n_dim = x.shape
 
     #[B,F]
@@ -221,6 +255,11 @@ class GenAttack(Attack, LabelMixin):
     """
     Runs GenAttack https://arxiv.org/abs/1805.11090
 
+    Disclaimers: Note that GenAttack assumes the model outputs 
+    normalized probabilities.  Moreover, computations are broadcasted,
+    so it is advisable to use smaller batch sizes when nb_samples is
+    large.
+
     Hyperparams: alpha (mutation range), rho (mutation probability), 
     and tau (temperature) all control exploration.  
     
@@ -228,7 +267,7 @@ class GenAttack(Attack, LabelMixin):
 
     :param predict: forward pass function.
     :param eps: maximum distortion.
-    :param order: the order of maximum distortion (inf or 2, default inf)
+    :param order: the order of maximum distortion (inf or 2)
     :param loss_fn: loss function (default None, GenAttack uses its own loss)
     :param nb_samples: population size (default 100)
     :param nb_iter: number of iterations (default 40)
@@ -238,10 +277,10 @@ class GenAttack(Attack, LabelMixin):
     :param decay: decay param for scheduler (default 0.9)
     :param clip_min: mininum value per input dimension (default 0.)
     :param clip_max: mininum value per input dimension (default 1.)
-    :param targeted:bool: if the attack is targeted (default False)
+    :param targeted: if the attack is targeted (default False)
     """
     def __init__(
-            self, predict, eps: float, order=inf,
+            self, predict, eps: float, order,
             loss_fn=None, 
             nb_samples=100,
             nb_iter=40,
@@ -337,7 +376,7 @@ class LinfGenAttack(GenAttack):
     :param decay: decay param for scheduler (default 0.9)
     :param clip_min: mininum value per input dimension (default 0.)
     :param clip_max: mininum value per input dimension (default 1.)
-    :param targeted:bool: if the attack is targeted (default False)
+    :param targeted: if the attack is targeted (default False)
     """
 
     def __init__(
@@ -375,7 +414,7 @@ class L2GenAttack(GenAttack):
     :param decay: decay param for scheduler (default 0.9)
     :param clip_min: mininum value per input dimension (default 0.)
     :param clip_max: mininum value per input dimension (default 1.)
-    :param targeted:bool: if the attack is targeted (default False)
+    :param targeted: if the attack is targeted (default False)
     """
 
     def __init__(

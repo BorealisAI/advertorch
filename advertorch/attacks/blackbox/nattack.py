@@ -1,21 +1,22 @@
-import numpy as np
+# Copyright (c) 2018-present, Royal Bank of Canada.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+#
+
+from math import inf
+from typing import List, Tuple, Optional
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-
 
 from advertorch.attacks.base import Attack
 from advertorch.attacks.base import LabelMixin
 
-from .utils import _check_param, _flatten
+from .utils import _check_param, _flatten, _make_projector
 
 from advertorch.utils import to_one_hot
-
-def sample_clamp(x, clip_min, clip_max):
-    new_x = torch.maximum(x, clip_min[:, None, :])
-    new_x = torch.minimum(new_x, clip_max[:, None, :])
-    return new_x
 
 def cw_log_loss(output, target, targeted=False, buff=1e-5):
     """
@@ -34,46 +35,49 @@ def cw_log_loss(output, target, targeted=False, buff=1e-5):
         loss = -0.5 * F.relu(correct_logit - wrong_logit + 50.)
     return loss
 
-
-def select_best_example(x_orig, x_adv, order, losses, success):
+def select_best_example(x_adv, losses):
     '''
-    Given a collection of potential adversarial examples, select the best,
-    according to either minimum input distortion or maximum output
-    distortion.
+    Given a collection of potential adversarial examples, select the best.
 
-    Also, return if adversarial example found (to avoid continuing the search)
+    :param x_adv: Candidate adversarial examples, shape [nbatch, nsample, ndim]
+    :param losses: Loss values for each candidate exampe, shape [nbatch, nsample]
     '''
-
-    #x_orig: [B, F]
-    #x_adv: [B, N, F]
-    #success: [B, N], 0/1 if sample succeded
-    #losses: [B, N]
-    #dists: [B, N]
-
-    if order == 'linf':
-        dists = abs(x_orig[:, None, :] - x_adv).max(-1).values
-    elif order == 'l2':
-        dists = torch.sqrt( ((x_orig[:, None, :] - x_adv) ** 2).sum(-1) )
-    else:
-        raise ValueError('unsupported metric {}'.format(order))
-
-    #[B, 1]
-    #TODO: use the success mask!
     best_loss_ind = losses.argmin(-1)[:, None, None]
     best_loss_ind = best_loss_ind.expand(-1, -1, x_adv.shape[-1])
-    #best_dist_ind = dists.argmin(-1)
 
-    #return x_adv[:, 0, :]
     best_adv = torch.gather(x_adv, dim=1, index=best_loss_ind )
     return best_adv.squeeze(1)
-    #return x_adv[:, best_loss_ind, :]
 
 def n_attack(
-        predict_fn, loss_fn, x, y, order, eps, clip_min, clip_max,
+        predict_fn, loss_fn, x, y, projector,
         mu_init=None, nb_samples=100, nb_iter=40, eps_iter=0.02, 
         sigma=0.1, targeted=False
     ):
-    #TODO: check correspondence
+    """
+    Models the distribution of adversarial examples near an input data point.
+    Similar to an evolutionary algorithm, but parameteric.
+    
+    Used as part of NAttack.
+
+    :param predict: forward pass function.
+    :param loss_fn: loss function
+        - must accept tensors of shape [nbatch, pop_size, ndim]
+    :param x: input tensor.
+    :param y: label tensor.
+        - if None and self.targeted=False, compute y as predicted
+        labels.
+        - if self.targeted=True, then y must be the targeted labels.
+    :param projector: function to project the perturbation into the eps-ball
+        - must accept tensors of shape [nbatch, pop_size, ndim]
+    :param nb_samples: number of samples for  (default 100)
+    :param nb_iter: number of iterations (default 40)
+    :param eps_iter: attack step size (default 0.02).
+    :param sigma: variance to control sample generation (default 0.1)
+    :param clip_min: mininum value per input dimension (default 0.)
+    :param clip_max: mininum value per input dimension (default 1.)
+    :param targeted: if the attack is targeted (default False)
+    """
+
     n_batch, n_dim = x.shape
     y_repeat = y.repeat(nb_samples, 1).T.flatten()
 
@@ -84,78 +88,58 @@ def n_attack(
     else:
         mu_t = mu_init.clone()
 
+    #factor used to scale updates to mu_t
+    alpha = eps_iter / (nb_samples * sigma)
+
     for _ in range(nb_iter):
-        #Sample from N(0,I)
-        #[B, N, F]
+        #Sample from N(0,I), shape [B, N, F]
         gauss_samples = torch.FloatTensor(n_batch, nb_samples, n_dim).normal_()
         gauss_samples = gauss_samples.to(x.device)
-        #print('samples nan?', torch.isnan(gauss_samples).any())
 
-        #Compute gi = g(mu_t + sigma * samples)
-        #[B, N, F]
+        #Compute gi = g(mu_t + sigma * samples), shape [B, N, F]
         mu_samples = mu_t[:, None, :] + sigma * gauss_samples
-        #print('mu_samples nan?', torch.isnan(mu_samples).any())
-
-        #linf proj
-        #[B, N, F]
-        #TODO: change order...? l2 project?
-        delta = sample_clamp(mu_samples, -eps[:, None], eps[:, None])
-        #print('delta nan?', torch.isnan(delta).any())
-        adv = x[:, None, :] + delta
-        #print('adv nan?', torch.isnan(adv).any())
-        adv = sample_clamp(adv, clip_min, clip_max)
-        #print('clamp nan?', torch.isnan(adv).any())
-        
-        #shouldn't this go earlier?
-        #[B * N, F]
-        adv = adv.reshape(-1, n_dim)
-        #[B * N, C]
+        delta = projector(mu_samples)
+        adv = (x[:, None, :] + delta).reshape(-1, n_dim)
         outputs = predict_fn(adv)
-        #print('outputs?', torch.isnan(adv).any())
-        #TODO: check that nothing is jumbled up
-
-        #[B * N]
-        if targeted:
-            success_mask = torch.argmax(outputs, dim=-1) == y_repeat
-        else:
-            success_mask = torch.argmax(outputs, dim=-1) != y_repeat
-
-        #[B, N]
-        success_mask = success_mask.reshape(n_batch, nb_samples)
-        #[B, N, C]
-        adv = adv.reshape(n_batch, nb_samples, -1)
-        #outputs = outputs.reshape(n_batch, self.nb_samples, -1)
-        #
-
-        #[B * N]
         losses = loss_fn(outputs, y_repeat, targeted=targeted)
-        #print('losses nan?', torch.isnan(losses).any())
-        #[B, N]
         losses = losses.reshape(n_batch, nb_samples)
         
-        #[N]
-        #z_score = (losses - np.mean(losses)) / (np.std(losses) + 1e-7)
-        #[B, N]
+        #Convert losses into z_scores
         z_score = (losses - losses.mean(1)[:, None]) / (losses.std(1)[:, None] + 1e-7)
-        #print('z_score nan?', torch.isnan(z_score).any())
 
-        #mu_t: [B, F]
-        #gauss_samples : [B,N,F]
-        #z_score: [B,N]
-        mu_t = mu_t + (eps_iter/(nb_samples*sigma)) * (z_score[:, :, None] * gauss_samples).sum(1)
-        #print('mu_t nan?', torch.isnan(mu_t).any())
+        #Update mu_t based on the z_scores
+        mu_t = mu_t + alpha * (z_score[:, :, None] * gauss_samples).sum(1)
 
-        #print('-' * 40)
-
-        #TODO: should losses be increasing or decreasing?
-
+    adv = adv.reshape(n_batch, nb_samples, -1)
     
-    return adv, mu_t, losses, success_mask
+    return adv, mu_t, losses
 
 
 class NAttack(Attack, LabelMixin):
+    """
+    Implements NAttack: https://arxiv.org/abs/1905.00441
+
+    Disclaimers: Note that NAttack assumes the model outputs 
+    normalized probabilities.  Moreover, computations are broadcasted,
+    so it is advisable to use smaller batch sizes when nb_samples is
+    large.
+
+    Hyperparams: sigma controls the variance for the generation of perturbations.
+
+    :param predict: forward pass function.
+    :param eps: maximum distortion.
+    :param order: the order of maximum distortion (inf or 2)
+    :param loss_fn: loss function (default None, NAttack uses CW loss)
+    :param nb_samples: population size (default 100)
+    :param nb_iter: number of iterations (default 40)
+    :param eps_iter: attack step size (default 0.02)
+    :param sigma: variance to control sample generation (default 0.1)
+    :param clip_min: mininum value per input dimension (default 0.)
+    :param clip_max: mininum value per input dimension (default 1.)
+    :param targeted: if the attack is targeted (default False)
+    """
     def __init__(
-            self, predict, eps: float, order='linf',
+            self, predict, eps: float, order,
             loss_fn=None, 
             nb_samples=100,
             nb_iter=40,
@@ -182,10 +166,11 @@ class NAttack(Attack, LabelMixin):
         self.sigma = sigma
         self.targeted = targeted
 
-        #Reference:
-        #https://github.com/Cold-Winter/Nattack/blob/master/therm-adv/re_li_attack_notanh.py
-
-    def perturb(self, x, y, mu_init=None):
+    def perturb(
+            self, 
+            x: torch.FloatTensor, 
+            y: Optional[torch.Tensor]=None
+        ) -> torch.FloatTensor:
         #[B, F]
         x, y = self._verify_and_process_inputs(x, y)
         shape, flat_x = _flatten(x)
@@ -203,16 +188,90 @@ class NAttack(Attack, LabelMixin):
             input = x.reshape(new_shape)
             return self.predict(input)
 
-        adv, _, losses, success_mask = n_attack(
-            predict_fn=f, loss_fn=self.loss_fn, x=flat_x, y=y, order=self.order, 
-            eps=eps, clip_min=clip_min, clip_max=clip_max,
-            mu_init=None, nb_samples=self.nb_samples, nb_iter=self.nb_iter, 
-            eps_iter=self.eps_iter, sigma=self.sigma, targeted=self.targeted
+
+        projector = _make_projector(
+            eps, self.order, flat_x, clip_min, clip_max
         )
 
-        #return flat_x, adv, self.order, losses, success_mask
+        adv, _, losses = n_attack(
+            predict_fn=f, loss_fn=self.loss_fn, x=flat_x, y=y,
+            projector=projector, nb_samples=self.nb_samples, 
+            nb_iter=self.nb_iter, eps_iter=self.eps_iter, sigma=self.sigma, 
+            targeted=self.targeted
+        )
 
-        adv = select_best_example(flat_x, adv, self.order, losses, success_mask)
+        adv = select_best_example(adv, losses)
         adv = adv.reshape(shape)
 
         return adv
+
+
+class LinfNAttack(Attack, LabelMixin):
+    """
+    NAttack with order=inf
+
+    :param predict: forward pass function.
+    :param eps: maximum distortion.
+    :param order: the order of maximum distortion (inf or 2)
+    :param loss_fn: loss function (default None, NAttack uses CW loss)
+    :param nb_samples: population size (default 100)
+    :param nb_iter: number of iterations (default 40)
+    :param eps_iter: attack step size (default 0.02)
+    :param sigma: variance to control sample generation (default 0.1)
+    :param clip_min: mininum value per input dimension (default 0.)
+    :param clip_max: mininum value per input dimension (default 1.)
+    :param targeted: if the attack is targeted (default False)
+    """
+    def __init__(
+            self, predict, eps: float,
+            loss_fn=None, 
+            nb_samples=100,
+            nb_iter=40,
+            eps_iter=0.02,
+            sigma=0.1,
+            clip_min=0., clip_max=1.,
+            targeted : bool = False
+            ):
+
+        super(LinfNAttack, self).__init__(
+            predict=predict, eps=eps, order=inf, loss_fn=loss_fn,
+            nb_samples=nb_samples, nb_iter=nb_iter, eps_iter=eps_iter,
+            sigma=sigma, clip_min=clip_min, clip_max=clip_max, 
+            targeted=targeted
+        )
+
+
+
+class L2NAttack(Attack, LabelMixin):
+    """
+    NAttack with order=2
+
+    :param predict: forward pass function.
+    :param eps: maximum distortion.
+    :param order: the order of maximum distortion (inf or 2)
+    :param loss_fn: loss function (default None, NAttack uses CW loss)
+    :param nb_samples: population size (default 100)
+    :param nb_iter: number of iterations (default 40)
+    :param eps_iter: attack step size (default 0.02)
+    :param sigma: variance to control sample generation (default 0.1)
+    :param clip_min: mininum value per input dimension (default 0.)
+    :param clip_max: mininum value per input dimension (default 1.)
+    :param targeted: if the attack is targeted (default False)
+    """
+    def __init__(
+            self, predict, eps: float,
+            loss_fn=None, 
+            nb_samples=100,
+            nb_iter=40,
+            eps_iter=0.02,
+            sigma=0.1,
+            clip_min=0., clip_max=1.,
+            targeted : bool = False
+            ):
+
+        super(LinfNAttack, self).__init__(
+            predict=predict, eps=eps, order=2, loss_fn=loss_fn,
+            nb_samples=nb_samples, nb_iter=nb_iter, eps_iter=eps_iter,
+            sigma=sigma, clip_min=clip_min, clip_max=clip_max, 
+            targeted=targeted
+        )
