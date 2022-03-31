@@ -254,13 +254,13 @@ general_input_attacks = [
     LinfNAttack,
     L2NAttack,
     BanditAttack,
-    NESAttack
-    DeepfoolLinfAttack,
+    NESAttack,
+    DeepfoolLinfAttack
 ]
 
 image_only_attacks = [
     SpatialTransformAttack,
-    LocalSearchAttack,
+    LocalSearchAttack
 ]
 
 label_attacks = [
@@ -287,7 +287,7 @@ label_attacks = [
     LinfNAttack,
     L2NAttack,
     BanditAttack,
-    NESAttack
+    NESAttack,
     DeepfoolLinfAttack,
 ]
 

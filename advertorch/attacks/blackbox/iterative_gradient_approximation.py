@@ -49,7 +49,7 @@ class NESAttack(LinfPGDAttack):
             nb_samples=100, fd_eta=1e-2, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
             targeted=False):
-        
+
         super(NESAttack, self).__init__(
             predict=predict, loss_fn=loss_fn, eps=eps, nb_iter=nb_iter,
             eps_iter=eps_iter, rand_init=rand_init, clip_min=clip_min,

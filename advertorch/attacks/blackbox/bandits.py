@@ -116,6 +116,8 @@ class BanditAttack(Attack, LabelMixin):
     :param exploration: scales the exploration around prior (default 0.01)
     :param online_lr: learning rate for the prior (default 0.1)
     :param loss_fn: loss function, defaults to CrossEntropyLoss
+        - The reduction must be set to 'none,' to ensure the per-sample
+        loss is accessible.
     :param nb_iter: number of iterations (default 40)
     :param eps_iter: attack step size (default 0.01)
     :param clip_min: mininum value per input dimension (default 0.)
@@ -131,6 +133,16 @@ class BanditAttack(Attack, LabelMixin):
             clip_min=0., clip_max=1.,
             targeted : bool = False
             ):
+
+        if loss_fn is not None:
+            import warnings
+            warnings.warn(
+                "This Attack currently do not support a different loss"
+                " function other than the default. Setting loss_fn manually"
+                " is not effective."
+            )
+
+        loss_fn = nn.CrossEntropyLoss(reduction="none")
         super().__init__(predict, loss_fn, clip_min, clip_max)
 
         self.eps = eps
@@ -139,9 +151,6 @@ class BanditAttack(Attack, LabelMixin):
         self.exploration = exploration
         self.online_lr = online_lr
         self.targeted = targeted
-        if self.loss_fn is None:
-            self.loss_fn = nn.CrossEntropyLoss(reduction="sum")
-
         self.nb_iter = nb_iter
         self.eps_iter = eps_iter
 

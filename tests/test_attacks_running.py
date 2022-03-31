@@ -10,6 +10,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
+
 import pytest
 import itertools
 
@@ -107,7 +109,7 @@ attack_kwargs = {
     L2GenAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
     LinfNAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
     L2NAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
-    BanditAttack : {"nb_iter" : 5, "eps" : 1},
+    BanditAttack : {"nb_iter" : 5, "eps" : 1, "order" : math.inf},
     NESAttack : {"nb_iter" : 5, "nb_samples" : 10},
     DeepfoolLinfAttack: {"nb_iter": 5},
 }

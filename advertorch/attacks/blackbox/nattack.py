@@ -206,7 +206,7 @@ class NAttack(Attack, LabelMixin):
         return adv
 
 
-class LinfNAttack(Attack, LabelMixin):
+class LinfNAttack(NAttack):
     """
     NAttack with order=inf
 
@@ -242,7 +242,7 @@ class LinfNAttack(Attack, LabelMixin):
 
 
 
-class L2NAttack(Attack, LabelMixin):
+class L2NAttack(NAttack):
     """
     NAttack with order=2
 
@@ -269,7 +269,7 @@ class L2NAttack(Attack, LabelMixin):
             targeted : bool = False
             ):
 
-        super(LinfNAttack, self).__init__(
+        super(L2NAttack, self).__init__(
             predict=predict, eps=eps, order=2, loss_fn=loss_fn,
             nb_samples=nb_samples, nb_iter=nb_iter, eps_iter=eps_iter,
             sigma=sigma, clip_min=clip_min, clip_max=clip_max, 
