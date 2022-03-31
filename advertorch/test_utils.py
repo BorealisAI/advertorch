@@ -38,6 +38,15 @@ from advertorch.defenses import AverageSmoothing2D
 from advertorch.defenses import GaussianSmoothing2D
 from advertorch.defenses import BinaryFilter
 
+#blackbox
+from advertorch.attacks import LinfGenAttack
+from advertorch.attacks import L2GenAttack
+from advertorch.attacks import LinfNAttack
+from advertorch.attacks import L2NAttack
+from advertorch.attacks import BanditAttack
+from advertorch.attacks import NESAttack
+
+
 
 DIM_INPUT = 15
 NUM_CLASS = 5
@@ -239,6 +248,12 @@ general_input_attacks = [
     LinfFABAttack,
     L2FABAttack,
     L1FABAttack,
+    LinfGenAttack,
+    L2GenAttack,
+    LinfNAttack,
+    L2NAttack,
+    BanditAttack,
+    NESAttack
 ]
 
 image_only_attacks = [
@@ -265,6 +280,12 @@ label_attacks = [
     LinfFABAttack,
     L2FABAttack,
     L1FABAttack,
+    LinfGenAttack,
+    L2GenAttack,
+    LinfNAttack,
+    L2NAttack,
+    BanditAttack,
+    NESAttack
 ]
 
 feature_attacks = [

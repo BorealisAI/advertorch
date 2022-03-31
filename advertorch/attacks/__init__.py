@@ -61,5 +61,5 @@ from .blackbox.nattack import L2NAttack
 
 from .blackbox.estimators import FDWrapper, NESWrapper
 
-from .blackbox.bandits_t import BanditAttack
+from .blackbox.bandits import BanditAttack
 from .blackbox.iterative_gradient_approximation import NESAttack

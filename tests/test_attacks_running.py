@@ -39,6 +39,14 @@ from advertorch.attacks import L1FABAttack
 from advertorch.utils import CarliniWagnerLoss
 from advertorch.utils import torch_allclose
 
+#blackbox
+from advertorch.attacks import LinfGenAttack
+from advertorch.attacks import L2GenAttack
+from advertorch.attacks import LinfNAttack
+from advertorch.attacks import L2NAttack
+from advertorch.attacks import BanditAttack
+from advertorch.attacks import NESAttack
+
 from advertorch.test_utils import NUM_CLASS
 from advertorch.test_utils import BATCH_SIZE
 from advertorch.test_utils import batch_consistent_attacks
@@ -94,6 +102,12 @@ attack_kwargs = {
     LinfFABAttack: {"n_iter": 5},
     L2FABAttack: {"n_iter": 5},
     L1FABAttack: {"n_iter": 5},
+    LinfGenAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
+    L2GenAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
+    LinfNAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
+    L2NAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
+    BanditAttack : {"nb_iter" : 5, "eps" : 1},
+    NESAttack : {"nb_iter" : 5, "nb_samples" : 10},
 }
 
 

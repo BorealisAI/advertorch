@@ -16,7 +16,7 @@ from .nattack import L2NAttack
 from .estimators import GradientWrapper
 from .estimators import FDWrapper, NESWrapper
 
-from .bandits_t import BanditAttack
+from .bandits import BanditAttack
 
 from .iterative_gradient_approximation import NESAttack
 

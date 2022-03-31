@@ -19,7 +19,7 @@ from advertorch.attacks.base import LabelMixin
 from .utils import _check_param, _flatten, _make_projector
 
 def bandit_attack(
-        x, loss_fn, eps, order, projector, delta_init=None, prior_init=None, 
+        x, loss_fn, order, projector, delta_init=None, prior_init=None, 
         fd_eta=0.01, exploration=0.01, online_lr=0.1, nb_iter=40, 
         eps_iter=0.01
     ):
@@ -183,7 +183,7 @@ class BanditAttack(Attack, LabelMixin):
             return loss
 
         adv, _ = bandit_attack(
-            flat_x, loss_fn=L, eps=eps, order=self.order, projector=projector, 
+            flat_x, loss_fn=L, order=self.order, projector=projector, 
             delta_init=None, prior_init=None, fd_eta=self.fd_eta, 
             exploration=self.exploration, online_lr=self.online_lr, 
             nb_iter=self.nb_iter, eps_iter=self.eps_iter

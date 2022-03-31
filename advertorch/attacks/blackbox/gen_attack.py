@@ -331,7 +331,7 @@ class GenAttack(Attack, LabelMixin):
         x, y = self._verify_and_process_inputs(x, y)
         shape, flat_x = _flatten(x)
         data_shape = tuple(shape[1:])
-        
+
         #[B]
         eps = _check_param(self.eps, x.new_full((x.shape[0],), 1), 'eps')
         #[B, F]
@@ -380,7 +380,7 @@ class LinfGenAttack(GenAttack):
     """
 
     def __init__(
-            self, predict, eps: float, order=inf,
+            self, predict, eps: float,
             loss_fn=None, 
             nb_samples=100,
             nb_iter=40,
@@ -418,7 +418,7 @@ class L2GenAttack(GenAttack):
     """
 
     def __init__(
-            self, predict, eps: float, order=inf,
+            self, predict, eps: float,
             loss_fn=None, 
             nb_samples=100,
             nb_iter=40,
