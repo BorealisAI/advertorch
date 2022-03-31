@@ -12,9 +12,9 @@ from functools import reduce
 import numpy as np
 
 import torch
-import torch.nn.functional as F
 
 from advertorch.utils import batch_clamp
+
 
 def pytorch_wrapper(func):
     def wrapped_func(x):
@@ -24,8 +24,9 @@ def pytorch_wrapper(func):
         output = output.to(x.device)
 
         return output
-    
+
     return wrapped_func
+
 
 def _check_param(param, x, name):
     if isinstance(param, (bool, int, float)):
@@ -33,19 +34,20 @@ def _check_param(param, x, name):
     elif isinstance(param, (np.ndarray, list)):
         if param.ndim != x.ndim:
             raise ValueError(f"Mismatched number of dimensions for {name}."
-            "  Expand dimensions to match input."
-            )
+                             "  Expand dimensions to match input."
+                             )
         new_param = torch.FloatTensor(param).to(x.device)  # type: ignore
     elif isinstance(param, torch.Tensor):
         if param.ndim != x.ndim:
             raise ValueError(f"Mismatched number of dimensions for {name}."
-            "  Expand dimensions to match input."
-            )
+                             "  Expand dimensions to match input."
+                             )
         new_param = param.to(x.device)  # type: ignore
     else:
         raise ValueError(f"Unknown format for {name}")
 
     return new_param
+
 
 def _flatten(x):
     shape = x.shape
@@ -57,37 +59,39 @@ def _flatten(x):
 
     return shape, flat_x
 
+
 def sample_clamp(x, clip_min, clip_max):
     new_x = torch.maximum(x, clip_min)
     new_x = torch.minimum(new_x, clip_max)
     return new_x
+
 
 def _make_projector(eps, order, x, clip_min, clip_max):
     if order == inf:
         def proj(delta):
             delta = batch_clamp(eps, delta)
             delta = sample_clamp(
-                x[:, None, :] + delta, 
-                clip_min[:, None, :], 
+                x[:, None, :] + delta,
+                clip_min[:, None, :],
                 clip_max[:, None, :]
             ) - x[:, None, :]
             return delta
     else:
         def proj(delta):
-            #find the samples that exceed the bounds
-            #and project them back inside
+            # find the samples that exceed the bounds
+            # and project them back inside
             norm = torch.norm(delta, p=order, dim=-1)
-            mask = (norm > eps[:, None]).float() #out of bounds
+            mask = (norm > eps[:, None]).float()  # out of bounds
             factor = torch.min(eps[:, None] / norm, torch.ones_like(norm))
             delta_norm = delta * factor[:, :, None]
             delta = mask[:, :, None] * delta_norm + \
                 (1 - mask)[:, :, None] * delta
 
             delta = sample_clamp(
-                x[:, None, :] + delta, 
-                clip_min[:, None, :], 
+                x[:, None, :] + delta,
+                clip_min[:, None, :],
                 clip_max[:, None, :]
             ) - x[:, None, :]
             return delta
-    
+
     return proj

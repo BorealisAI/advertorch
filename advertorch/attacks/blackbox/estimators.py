@@ -6,11 +6,12 @@
 #
 
 import torch
-
 import numpy as np
 
+
 def norm(v):
-    return torch.sqrt( (v ** 2).sum(-1) ) 
+    return torch.sqrt((v ** 2).sum(-1))
+
 
 class GradientWrapper(torch.nn.Module):
     """
@@ -28,13 +29,11 @@ class GradientWrapper(torch.nn.Module):
     def __init__(self, func):
         super().__init__()
         self.func = func
-        
-        #Based on:
-        #https://pytorch.org/docs/stable/notes/extending.html
+
         class _Func(torch.autograd.Function):
             @staticmethod
             def forward(ctx, input):
-                #grad_est does not require grad
+                # grad_est does not require grad
                 output = self.func(input)
                 grad_est = self.estimate_grad(input)
                 ctx.save_for_backward(grad_est)
@@ -42,8 +41,8 @@ class GradientWrapper(torch.nn.Module):
 
             @staticmethod
             def backward(ctx, grad_output):
-                #Note: this is not general! May not work for images
-                #Be careful about dimensions
+                # Note: this is not general! May not work for images
+                # Be careful about dimensions
                 grad_est, = ctx.saved_tensors
                 grad_input = None
 
@@ -60,11 +59,11 @@ class GradientWrapper(torch.nn.Module):
         """
         n_batch, n_dim, nb_samples = x.shape
         x = x.permute(0, 2, 1).reshape(-1, n_dim)
-        outputs = self.func(x) #shape [..., n_output]
+        outputs = self.func(x)  # shape [..., n_output]
         outputs = outputs.reshape(n_batch, nb_samples, -1)
 
         return outputs.permute(0, 2, 1)
-    
+
     def estimate_grad(self, x):
         raise NotImplementedError
 
@@ -76,10 +75,11 @@ class GradientWrapper(torch.nn.Module):
 
         return output
 
+
 class FDWrapper(GradientWrapper):
     """
-    Finite-Difference Estimator.  
-    For every backward pass, this module makes 2 * n_dim queries per 
+    Finite-Difference Estimator.
+    For every backward pass, this module makes 2 * n_dim queries per
     instance.
 
     :param func: A blackbox function.
@@ -91,16 +91,15 @@ class FDWrapper(GradientWrapper):
         self.fd_eta = fd_eta
 
     def estimate_grad(self, x):
-        id_mat = torch.diag(torch.ones_like(x[0])) # shape [D,D]
-        
+        id_mat = torch.diag(torch.ones_like(x[0]))  # shape [D,D]
         fxp = self.batch_query(
             x[:, :, None] + self.fd_eta * id_mat[None, :, :]
         )
-        
+
         fxm = self.batch_query(
             x[:, :, None] - self.fd_eta * id_mat[None, :, :]
         )
-        
+
         grad_est = (fxp - fxm) / (2.0 * self.fd_eta)
         return grad_est
 
@@ -108,7 +107,7 @@ class FDWrapper(GradientWrapper):
 class NESWrapper(GradientWrapper):
     """
     Natural-evolutionary strategy for gradient estimation.
-    For every backward pass, this module makes 2 * nb_samples 
+    For every backward pass, this module makes 2 * nb_samples
     queries per instance.
 
     :param func: A blackbox function.
@@ -122,7 +121,7 @@ class NESWrapper(GradientWrapper):
         self.fd_eta = fd_eta
 
     def estimate_grad(self, x, prior=None):
-        #x shape: [nbatch, ndim]
+        # x shape: [nbatch, ndim]
         ndim = np.prod(list(x.shape[1:]))
 
         # [nbatch, ndim, nsamples]
@@ -138,14 +137,8 @@ class NESWrapper(GradientWrapper):
             x.unsqueeze(-1) - self.fd_eta * exp_noise
         )
 
-        gx_s = (fxp - fxm) / (2.0 * self.fd_eta) #[nbatch, noutput, nsamples]
-        
+        gx_s = (fxp - fxm) / (2.0 * self.fd_eta)  # [nbatch, noutput, nsamples]
+
         grad_est = (gx_s[:, :, None, :] * exp_noise[:, None, :, :]).sum(-1)
-        
+
         return grad_est
-
-
-
-
-
-

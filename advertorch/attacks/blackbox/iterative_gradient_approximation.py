@@ -8,12 +8,8 @@
 import torch
 import torch.nn as nn
 
-from advertorch.utils import clamp, to_one_hot, is_float_or_torch_tensor
-
+from advertorch.utils import clamp
 from advertorch.attacks.utils import rand_init_delta
-
-from advertorch.attacks.base import Attack
-from advertorch.attacks.base import LabelMixin
 
 from advertorch.attacks.iterative_projected_gradient import LinfPGDAttack
 from advertorch.attacks.iterative_projected_gradient import perturb_iterative
@@ -21,14 +17,15 @@ from advertorch.attacks.iterative_projected_gradient import perturb_iterative
 from .estimators import NESWrapper
 from .utils import _flatten
 
+
 class NESAttack(LinfPGDAttack):
     """
     Implements NES Attack https://arxiv.org/abs/1804.08598
-    
+
     Employs Natural Evolutionary Strategies for Gradient Estimation.
     Generates Adversarial Examples using Projected Gradient Descent.
 
-    Disclaimer: Computations are broadcasted, so it is advisable to use 
+    Disclaimer: Computations are broadcasted, so it is advisable to use
     smaller batch sizes when nb_samples is large.
 
     :param predict: forward pass function.
@@ -45,7 +42,7 @@ class NESAttack(LinfPGDAttack):
     """
 
     def __init__(
-            self, predict, loss_fn=None, eps=0.3, 
+            self, predict, loss_fn=None, eps=0.3,
             nb_samples=100, fd_eta=1e-2, nb_iter=40,
             eps_iter=0.01, rand_init=True, clip_min=0., clip_max=1.,
             targeted=False):
@@ -54,7 +51,7 @@ class NESAttack(LinfPGDAttack):
             predict=predict, loss_fn=loss_fn, eps=eps, nb_iter=nb_iter,
             eps_iter=eps_iter, rand_init=rand_init, clip_min=clip_min,
             clip_max=clip_max, targeted=targeted)
-        
+
         self.nb_samples = nb_samples
         self.fd_eta = fd_eta
 
@@ -73,6 +70,7 @@ class NESAttack(LinfPGDAttack):
         x, y = self._verify_and_process_inputs(x, y)
         shape, flat_x = _flatten(x)
         data_shape = tuple(shape[1:])
+
         def f(x):
             new_shape = (x.shape[0],) + data_shape
             input = x.reshape(new_shape)
