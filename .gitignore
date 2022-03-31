@@ -5,6 +5,7 @@
 *.tar
 *.png
 .ipynb_checkpoints/
+.idea/
 __pycache__/
 *.pdf
 *.npz
@@ -20,3 +21,5 @@ build/
 dist/
 _build/
 _tutorials/
+.coverage
+*.xml

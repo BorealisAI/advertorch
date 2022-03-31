@@ -31,6 +31,7 @@ from advertorch.attacks import LinfSPSAAttack
 from advertorch.attacks import LinfFABAttack
 from advertorch.attacks import L2FABAttack
 from advertorch.attacks import L1FABAttack
+from advertorch.attacks import DeepfoolLinfAttack
 from advertorch.defenses import JPEGFilter
 from advertorch.defenses import BitSqueezing
 from advertorch.defenses import MedianSmoothing2D
@@ -254,6 +255,7 @@ general_input_attacks = [
     L2NAttack,
     BanditAttack,
     NESAttack
+    DeepfoolLinfAttack,
 ]
 
 image_only_attacks = [
@@ -286,6 +288,7 @@ label_attacks = [
     L2NAttack,
     BanditAttack,
     NESAttack
+    DeepfoolLinfAttack,
 ]
 
 feature_attacks = [
@@ -305,6 +308,7 @@ batch_consistent_attacks = [
     SparseL1DescentAttack,
     L1PGDAttack,
     LinfSPSAAttack,
+    DeepfoolLinfAttack,
     # FABAttack,
     # CarliniWagnerL2Attack,  # XXX: not exactly sure: test says no
     # LBFGSAttack,  # XXX: not exactly sure: test says no

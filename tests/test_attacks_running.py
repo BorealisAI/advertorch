@@ -36,6 +36,7 @@ from advertorch.attacks import LinfSPSAAttack
 from advertorch.attacks import LinfFABAttack
 from advertorch.attacks import L2FABAttack
 from advertorch.attacks import L1FABAttack
+from advertorch.attacks import DeepfoolLinfAttack
 from advertorch.utils import CarliniWagnerLoss
 from advertorch.utils import torch_allclose
 
@@ -108,6 +109,7 @@ attack_kwargs = {
     L2NAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
     BanditAttack : {"nb_iter" : 5, "eps" : 1},
     NESAttack : {"nb_iter" : 5, "nb_samples" : 10},
+    DeepfoolLinfAttack: {"nb_iter": 5},
 }
 
 

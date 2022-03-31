@@ -47,13 +47,12 @@ class SinglePixelAttack(Attack, LabelMixin):
         self.comply_with_foolbox = comply_with_foolbox
         self.targeted = targeted
 
-
     def perturb_single(self, x, y):
         # x shape [C * H * W]
         if self.comply_with_foolbox is True:
             np.random.seed(233333)
             rand_np = np.random.permutation(x.shape[1] * x.shape[2])
-            pixels = torch.from_numpy(rand_np)
+            pixels = torch.from_numpy(rand_np).type(torch.LongTensor)
         else:
             pixels = torch.randperm(x.shape[1] * x.shape[2])
         pixels = pixels.to(x.device)
@@ -147,7 +146,7 @@ class LocalSearchAttack(Attack, LabelMixin):
             # Computing the function g using the neighbourhood
             if self.comply_with_foolbox:
                 rand_np = np.random.permutation(len(pxy))[:self.max_nb_seeds]
-                pxy = pxy[torch.from_numpy(rand_np)]
+                pxy = pxy[torch.from_numpy(rand_np).type(torch.LongTensor)]
             else:
                 pxy = pxy[torch.randperm(len(pxy))[:self.max_nb_seeds]]
 
@@ -187,7 +186,7 @@ class LocalSearchAttack(Attack, LabelMixin):
                 for col in range(
                     int(colcenter) - self.d, int(colcenter) + self.d + 1)]
             pxy = list(set((row, col) for row, col in pxy if (
-                0 <= row < x.shape[2] and 0 <= col < x.shape[1])))
+                    0 <= row < x.shape[2] and 0 <= col < x.shape[1])))
             pxy = torch.FloatTensor(pxy)
             ii += 1
         if best_img is None:
@@ -203,13 +202,11 @@ class LocalSearchAttack(Attack, LabelMixin):
         x = x / (vmax - vmin)
         return x, -0.5, 0.5
 
-
     def _revert_rescale(self, x, vmin=0., vmax=1.):
         x_revert = x.clone()
         x_revert = x_revert * (vmax - vmin)
         x_revert = x_revert + (vmin + vmax) / 2
         return x_revert
-
 
     def _random_sample_seeds(self, h, w, seed_ratio, max_nb_seeds, init_rand):
         n = int(seed_ratio * h * w)
@@ -224,7 +221,6 @@ class LocalSearchAttack(Attack, LabelMixin):
         pxy = torch.Tensor(pxy)
         return pxy
 
-
     def _perturb_seed_pixel(self, x, p, row, col):
         x_pert = replicate_input(x)
         for ii in range(x.shape[0]):
@@ -236,7 +232,6 @@ class LocalSearchAttack(Attack, LabelMixin):
                 x_pert[ii, row, col] = 0
         return x_pert
 
-
     def _cyclic(self, r, lower_bound, upper_bound, i_bxy):
         # Algorithm 2 in v1
         result = r * i_bxy
@@ -245,7 +240,6 @@ class LocalSearchAttack(Attack, LabelMixin):
         elif result > upper_bound:
             result = result - (upper_bound - lower_bound)
         return result
-
 
     def _rescale_x_score(self, predict, x, y, ori, best_dist):
         x = torch.stack(x)

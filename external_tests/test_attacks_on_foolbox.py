@@ -28,7 +28,6 @@ import foolbox
 from foolbox.attacks.localsearch import SinglePixelAttack as SPAfb
 from foolbox.attacks.localsearch import LocalSearchAttack as LSAfb
 
-
 NUM_CLASS = 10
 BATCH_SIZE = 10
 # TODO: need to make sure these precisions are enough
@@ -57,8 +56,6 @@ model.to("cpu")
 #     torch.load(os.path.join(TRAINED_MODEL_PATH,
 #                             'mnist_lenet5_advtrained.pt')))
 # model.to("cpu")
-
-
 
 
 attack_kwargs = {
@@ -107,7 +104,6 @@ attack_kwargs = {
 }
 
 
-
 def compare_at_fb(ptb_at, ptb_fb, atol, rtol):
     assert np.allclose(ptb_at, ptb_fb, atol=atol, rtol=rtol), \
         (np.abs(ptb_at - ptb_fb).max())
@@ -118,7 +114,7 @@ def compare_attacks(key, item):
     fmodel = foolbox.models.PyTorchModel(
         model, bounds=(0, 1),
         num_classes=NUM_CLASS,
-        cuda=False,
+        device="cpu"
     )
     fb_adversary = item["fb_class"](fmodel)
     fb_kwargs = merge2dicts(item["kwargs"], item["fb_kwargs"])

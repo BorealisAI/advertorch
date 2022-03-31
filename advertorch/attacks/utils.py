@@ -27,6 +27,12 @@ from advertorch.loss import ZeroOneLoss
 from advertorch.attacks import Attack, LabelMixin
 
 
+def zero_gradients(x):
+    if isinstance(x, torch.Tensor):
+        if x.grad is not None:
+            x.grad.detach_()
+            x.grad.zero_()
+
 
 def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
     # TODO: Currently only considered one way of "uniform" sampling
@@ -120,7 +126,6 @@ def multiple_mini_batch_attack(
     else:
         assert norm is None
 
-
     idx_batch = 0
 
     for data, label in loader:
@@ -139,7 +144,7 @@ def multiple_mini_batch_attack(
             break
 
     return torch.cat(lst_label), torch.cat(lst_pred), torch.cat(lst_advpred), \
-        torch.cat(lst_dist) if norm is not None else None
+           torch.cat(lst_dist) if norm is not None else None
 
 
 class MarginalLoss(_Loss):
@@ -217,4 +222,4 @@ def attack_whole_dataset(adversary, loader, device="cuda"):
         lst_advpred.append(advpred)
         lst_adv.append(adv)
     return torch.cat(lst_adv), torch.cat(lst_label), torch.cat(lst_pred), \
-        torch.cat(lst_advpred)
+           torch.cat(lst_advpred)
