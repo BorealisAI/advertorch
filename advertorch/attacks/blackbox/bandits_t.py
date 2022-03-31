@@ -4,7 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
+from math import inf
 from typing import Optional
 
 import numpy as np
@@ -16,12 +16,12 @@ import torch.nn.functional as F
 from advertorch.attacks.base import Attack
 from advertorch.attacks.base import LabelMixin
 
-from advertorch.attacks.blackbox.utils import _check_param, _flatten
+from .utils import _check_param, _flatten, _make_projector
 
 def bandit_attack(
-        x, loss_fn, eps, clip_min, clip_max, order='l2',
-        delta_init=None, prior_init=None, fd_eta=0.01, exploration=0.01, 
-        online_lr=0.1, nb_iter=40, eps_iter=0.01
+        x, loss_fn, eps, order, projector, delta_init=None, prior_init=None, 
+        fd_eta=0.01, exploration=0.01, online_lr=0.1, nb_iter=40, 
+        eps_iter=0.01
     ):
     """
     Performs the BanditAttack
@@ -30,9 +30,9 @@ def bandit_attack(
     :param x: input data.
     :param loss_fn: loss function.
     :param eps: maximum distortion.
-    :param order: (optional) the order of maximum distortion ('linf' or 'l2').
-    :param clip_min: mininum value per input dimension (default 0.)
-    :param clip_max: mininum value per input dimension (default 1.)
+    :param order: (optional) the order of maximum distortion (2 or inf).
+    :param projector: function to project the perturbation into the eps-ball
+        - must accept tensors of shape [nbatch, pop_size, ndim]
     :param delta_init: (default None)
     :param prior_init: (default None)
     :param fd_eta: step-size used for finite difference grad estimate (default 0.01)
@@ -74,8 +74,8 @@ def bandit_attack(
 
         delta_L = (L1 - L2)/(fd_eta * exploration) #[nbatch]
         
-        grad_est = delta_L * exp_noise
-        if order == 'l2':
+        grad_est = delta_L[:, None] * exp_noise
+        if order == 2:
             #update prior
             prior = prior + online_lr * grad_est
             #make step with prior
@@ -83,12 +83,8 @@ def bandit_attack(
             adv = adv + eps_iter * F.normalize(prior, dim=-1)
             #project
             delta = adv - x
-            norms = torch.sqrt( (delta ** 2).sum(-1))
-            out_of_bounds_mask = (norms > eps).float().unsqueeze(-1)
-            #if out_of_bounds, use the clipped values
-            clipped = (x + eps[:, None] * F.normalize(delta, dim=-1))
-            adv = clipped * out_of_bounds_mask + adv * (1 - out_of_bounds_mask)
-        elif order == 'linf':
+            delta = projector(delta[:, None, :]).squeeze(1)
+        elif order == inf:
             #update prior (exponentiated gradients)
             prior = (prior + 1) / 2 # from [-1, 1] to [0, 1]
             pos = prior * torch.exp(online_lr * grad_est)
@@ -97,15 +93,13 @@ def bandit_attack(
             #make step with prior
             adv = adv + eps_iter * torch.sign(prior)
             #project
-            delta = torch.minimum(adv - x, eps[:, None])
-            delta = torch.maximum(delta, -eps[:, None])
-            adv = x + delta
+            delta = adv - x
+            delta = projector(delta[:, None, :]).squeeze(1)
         else:
-            error = "Only order = 'linf', order = 'l2' have been implemented"
+            error = "Only order=inf, order=2 have been implemented"
             raise NotImplementedError(error)
         
-        adv = torch.maximum(adv, clip_min)
-        adv = torch.minimum(adv, clip_max)
+        adv = x + delta
 
     return adv, prior
 
@@ -117,7 +111,7 @@ class BanditAttack(Attack, LabelMixin):
     
     :param predict: forward pass function.
     :param eps: maximum distortion.
-    :param order: the order of maximum distortion ('linf' or 'l2', default l2)
+    :param order: the order of maximum distortion (inf or 2)
     :param fd_eta: step-size used for finite difference grad estimate (default 0.01)
     :param exploration: scales the exploration around prior (default 0.01)
     :param online_lr: learning rate for the prior (default 0.1)
@@ -169,24 +163,30 @@ class BanditAttack(Attack, LabelMixin):
         """
         x, y = self._verify_and_process_inputs(x, y)
         shape, flat_x = _flatten(x)
+        data_shape = tuple(shape[1:])
         
         eps = _check_param(self.eps, x.new_full((x.shape[0],), 1), 'eps')
         clip_min = _check_param(self.clip_min, flat_x, 'clip_min')
         clip_max = _check_param(self.clip_max, flat_x, 'clip_max')
 
+        projector = _make_projector(
+            eps, self.order, flat_x, clip_min, clip_max
+        )
+
         scale = -1 if self.targeted else 1
         def L(x): #loss func
+            #new_shape = (x.shape[0],) + data_shape
+            #input = x.reshape(new_shape)
             input = x.reshape(shape)
             output = self.predict(input)
             loss = scale * self.loss_fn(output, y)
             return loss
 
         adv, _ = bandit_attack(
-            flat_x, loss_fn=L, eps=eps, order=self.order, clip_min=clip_min,
-            clip_max=clip_max, delta_init=None, prior_init=None,
-            fd_eta=self.fd_eta, exploration=self.exploration, 
-            online_lr=self.online_lr, nb_iter=self.nb_iter, 
-            eps_iter=self.eps_iter
+            flat_x, loss_fn=L, eps=eps, order=self.order, projector=projector, 
+            delta_init=None, prior_init=None, fd_eta=self.fd_eta, 
+            exploration=self.exploration, online_lr=self.online_lr, 
+            nb_iter=self.nb_iter, eps_iter=self.eps_iter
         )
 
         adv = adv.reshape(shape)

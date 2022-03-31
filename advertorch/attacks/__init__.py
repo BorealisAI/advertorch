@@ -55,6 +55,11 @@ from .blackbox.gen_attack import GenAttack
 from .blackbox.gen_attack import LinfGenAttack
 from .blackbox.gen_attack import L2GenAttack
 
-from .blackbox.grad_estimators import FDWrapper, NESWrapper
 from .blackbox.nattack import NAttack
+from .blackbox.nattack import LinfNAttack
+from .blackbox.nattack import L2NAttack
+
+from .blackbox.estimators import FDWrapper, NESWrapper
+
 from .blackbox.bandits_t import BanditAttack
+from .blackbox.iterative_gradient_approximation import NESAttack

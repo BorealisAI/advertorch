@@ -16,6 +16,17 @@ import torch.nn.functional as F
 
 from advertorch.utils import batch_clamp
 
+def pytorch_wrapper(func):
+    def wrapped_func(x):
+        x_numpy = x.cpu().data.numpy()
+        output = func(x_numpy)
+        output = torch.from_numpy(output)
+        output = output.to(x.device)
+
+        return output
+    
+    return wrapped_func
+
 def _check_param(param, x, name):
     if isinstance(param, (bool, int, float)):
         new_param = param * torch.ones_like(x)

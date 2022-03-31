@@ -331,7 +331,7 @@ class GenAttack(Attack, LabelMixin):
         x, y = self._verify_and_process_inputs(x, y)
         shape, flat_x = _flatten(x)
         data_shape = tuple(shape[1:])
-
+        
         #[B]
         eps = _check_param(self.eps, x.new_full((x.shape[0],), 1), 'eps')
         #[B, F]
