@@ -56,13 +56,13 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
         self.overshoot = overshoot
         self.targeted = targeted
 
-    def is_adv(self, logits, y):  
+    def is_adv(self, logits, y):
         # criterion
         y_hat = logits.argmax(-1)
         is_adv = y_hat != y
         return is_adv
 
-    def get_deltas_logits(self, x, k, classes):  
+    def get_deltas_logits(self, x, k, classes):
         # definition of loss_fn
         N = len(classes)
         rows = range(N)
@@ -78,18 +78,18 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
                 'deltas': delta_logits,
                 'logits': logits}
 
-    def get_grads(self, x, k, classes):  
+    def get_grads(self, x, k, classes):
         deltas_logits = self.get_deltas_logits(x, k, classes)
         deltas_logits['sum_deltas'].backward()
         deltas_logits['grads'] = x.grad.clone()
         x.grad.data.zero_()
         return deltas_logits
 
-    def get_distances(self, deltas, grads):  
+    def get_distances(self, deltas, grads):
         return abs(deltas) / (
             grads.flatten(start_dim=2, end_dim=-1).abs().sum(axis=-1) + 1e-8)
 
-    def get_perturbations(self, distances, grads):  
+    def get_perturbations(self, distances, grads):
         return self.atleast_kd(distances, grads.ndim) * grads.sign()
 
     def atleast_kd(self, x, k):
@@ -177,7 +177,7 @@ class DeepfoolLinfAttack(Attack, LabelMixin):
                 x,
                 x0 + (1.0 + self.overshoot) * p_total,
             )  # =x_{i+1}
-            
+
             x = clamp(x, min=self.clip_min, max=self.clip_max).clone().detach().requires_grad_() # noqa
 
         return x.detach()

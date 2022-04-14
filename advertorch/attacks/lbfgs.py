@@ -83,11 +83,11 @@ class LBFGSAttack(Attack, LabelMixin):
                 if coeff_upper_bound[ii] < UPPER_CHECK:
                     loss_coeffs[ii] = (coeff_lower_bound[ii] +
                                        coeff_upper_bound[ii]) / 2
-            
+
             else:
                 coeff_lower_bound[ii] = max(
                     coeff_lower_bound[ii], loss_coeffs[ii])
-                
+
                 if coeff_upper_bound[ii] < UPPER_CHECK:
                     loss_coeffs[ii] = (coeff_lower_bound[ii] +
                                        coeff_upper_bound[ii]) / 2
