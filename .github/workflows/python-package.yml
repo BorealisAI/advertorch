@@ -41,7 +41,9 @@ jobs:
         python -m pip install -e .
     - name: Lint with flake8
       run: |
-        flake8 . flake8 --exclude=build/*
+        flake8 . --exclude=build/*
     - name: Test with pytest
       run: |
         pytest
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
