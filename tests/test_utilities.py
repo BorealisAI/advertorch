@@ -61,7 +61,7 @@ def test_grad_through_normalize():
 
 def _run_tf_per_image_standardization(imgs):
     import tensorflow.compat.v1 as tf
-    tf.disable_v2_behavior() 
+    tf.disable_v2_behavior()
     import tensorflow.image  # noqa: F401
 
     imgs = bchw2bhwc(imgs)

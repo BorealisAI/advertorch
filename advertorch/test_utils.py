@@ -39,7 +39,7 @@ from advertorch.defenses import AverageSmoothing2D
 from advertorch.defenses import GaussianSmoothing2D
 from advertorch.defenses import BinaryFilter
 
-#blackbox
+# blackbox
 from advertorch.attacks import LinfGenAttack
 from advertorch.attacks import L2GenAttack
 from advertorch.attacks import LinfNAttack

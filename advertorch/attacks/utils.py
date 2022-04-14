@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import collections
 import numpy as np
 import torch
 
@@ -32,6 +33,9 @@ def zero_gradients(x):
         if x.grad is not None:
             x.grad.detach_()
             x.grad.zero_()
+    elif isinstance(x, collections.abc.Iterable):
+        for elem in x:
+            zero_gradients(elem)
 
 
 def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):

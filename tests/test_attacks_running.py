@@ -42,7 +42,7 @@ from advertorch.attacks import DeepfoolLinfAttack
 from advertorch.utils import CarliniWagnerLoss
 from advertorch.utils import torch_allclose
 
-#blackbox
+# blackbox
 from advertorch.attacks import LinfGenAttack
 from advertorch.attacks import L2GenAttack
 from advertorch.attacks import LinfNAttack
@@ -79,20 +79,37 @@ feature_criteria = (smoothl1_loss, mse_loss)
 cuda = "cuda"
 cpu = "cpu"
 
-devices = (cpu, cuda) if torch.cuda.is_available() else (cpu, )
+devices = (cpu, cuda) if torch.cuda.is_available() else (cpu,)
 
 attack_kwargs = {
     GradientSignAttack: {},
     GradientAttack: {},
     SparseL1DescentAttack: {
-        "rand_init": False, "nb_iter": 5, "eps": 3., "eps_iter": 1.},
-    L1PGDAttack: {"rand_init": False, "nb_iter": 5, "eps": 3., "eps_iter": 1.},
-    L2BasicIterativeAttack: {"nb_iter": 5, "eps": 1., "eps_iter": 0.33},
+        "rand_init": False,
+        "nb_iter": 5,
+        "eps": 3.0,
+        "eps_iter": 1.0,
+    },
+    L1PGDAttack: {
+        "rand_init": False,
+        "nb_iter": 5,
+        "eps": 3.0,
+        "eps_iter": 1.0,
+    },
+    L2BasicIterativeAttack: {"nb_iter": 5, "eps": 1.0, "eps_iter": 0.33},
     L2PGDAttack: {
-        "rand_init": False, "nb_iter": 5, "eps": 1., "eps_iter": 0.33},
+        "rand_init": False,
+        "nb_iter": 5,
+        "eps": 1.0,
+        "eps_iter": 0.33,
+    },
     LinfBasicIterativeAttack: {"nb_iter": 5, "eps": 0.3, "eps_iter": 0.1},
     LinfPGDAttack: {
-        "rand_init": False, "nb_iter": 5, "eps": 0.3, "eps_iter": 0.1},
+        "rand_init": False,
+        "nb_iter": 5,
+        "eps": 0.3,
+        "eps_iter": 0.1,
+    },
     MomentumIterativeAttack: {"nb_iter": 5},
     CarliniWagnerL2Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
     ElasticNetL1Attack: {"num_classes": NUM_CLASS, "max_iterations": 10},
@@ -105,12 +122,12 @@ attack_kwargs = {
     LinfFABAttack: {"n_iter": 5},
     L2FABAttack: {"n_iter": 5},
     L1FABAttack: {"n_iter": 5},
-    LinfGenAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
-    L2GenAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
-    LinfNAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
-    L2NAttack : {"nb_iter" : 5, "nb_samples" : 10, "eps" : 1},
-    BanditAttack : {"nb_iter" : 5, "eps" : 1, "order" : math.inf},
-    NESAttack : {"nb_iter" : 5, "nb_samples" : 10},
+    LinfGenAttack: {"nb_iter": 5, "nb_samples": 10, "eps": 1},
+    L2GenAttack: {"nb_iter": 5, "nb_samples": 10, "eps": 1},
+    LinfNAttack: {"nb_iter": 5, "nb_samples": 10, "eps": 1},
+    L2NAttack: {"nb_iter": 5, "nb_samples": 10, "eps": 1},
+    BanditAttack: {"nb_iter": 5, "eps": 1, "order": math.inf},
+    NESAttack: {"nb_iter": 5, "nb_samples": 10},
     DeepfoolLinfAttack: {"nb_iter": 5},
 }
 
@@ -133,38 +150,53 @@ def _run_and_assert_original_data_untouched(adversary, data, label):
 
 
 def _run_data_model_criterion_label_attack(
-        data, label, model, criterion, attack, device):
+    data, label, model, criterion, attack, device
+):
     model.to(device)
     adversary = attack(
-        predict=model, loss_fn=criterion, **attack_kwargs[attack])
+        predict=model, loss_fn=criterion, **attack_kwargs[attack]
+    )
     data, label = data.to(device), label.to(device)
     _run_and_assert_original_data_untouched(adversary, data, label)
 
 
 @pytest.mark.parametrize(
-    "device, criterion, att_cls", itertools.product(
-        devices, label_criteria,
-        set(label_attacks).intersection(general_input_attacks)))
+    "device, criterion, att_cls",
+    itertools.product(
+        devices,
+        label_criteria,
+        set(label_attacks).intersection(general_input_attacks),
+    ),
+)
 def test_running_label_attacks_on_vec(device, criterion, att_cls):
     _run_data_model_criterion_label_attack(
-        vecdata, veclabel, vecmodel, criterion, att_cls, device)
+        vecdata, veclabel, vecmodel, criterion, att_cls, device
+    )
 
 
 @pytest.mark.parametrize(
-    "device, criterion, att_cls", itertools.product(
-        devices, label_criteria,
+    "device, criterion, att_cls",
+    itertools.product(
+        devices,
+        label_criteria,
         set(label_attacks).intersection(
-            image_only_attacks + general_input_attacks)))
+            image_only_attacks + general_input_attacks
+        ),
+    ),
+)
 def test_running_label_attacks_on_img(device, criterion, att_cls):
     _run_data_model_criterion_label_attack(
-        imgdata, imglabel, imgmodel, criterion, att_cls, device)
+        imgdata, imglabel, imgmodel, criterion, att_cls, device
+    )
 
 
 def _run_data_model_criterion_feature_attack(
-        data, model, criterion, attack, device):
+    data, model, criterion, attack, device
+):
     model.to(device)
     adversary = attack(
-        predict=model, loss_fn=criterion, **attack_kwargs[attack])
+        predict=model, loss_fn=criterion, **attack_kwargs[attack]
+    )
     guide = data.detach().clone()[torch.randperm(len(data))]
     source, guide = data.to(device), guide.to(device)
     source_clone = source.clone()
@@ -173,22 +205,33 @@ def _run_data_model_criterion_feature_attack(
 
 
 @pytest.mark.parametrize(
-    "device, criterion, att_cls", itertools.product(
-        devices, feature_criteria,
-        set(feature_attacks).intersection(general_input_attacks)))
+    "device, criterion, att_cls",
+    itertools.product(
+        devices,
+        feature_criteria,
+        set(feature_attacks).intersection(general_input_attacks),
+    ),
+)
 def test_running_feature_attacks_on_vec(device, criterion, att_cls):
     _run_data_model_criterion_feature_attack(
-        vecdata, vecmodel, criterion, att_cls, device)
+        vecdata, vecmodel, criterion, att_cls, device
+    )
 
 
 @pytest.mark.parametrize(
-    "device, criterion, att_cls", itertools.product(
-        devices, feature_criteria,
+    "device, criterion, att_cls",
+    itertools.product(
+        devices,
+        feature_criteria,
         set(feature_attacks).intersection(
-            image_only_attacks + general_input_attacks)))
+            image_only_attacks + general_input_attacks
+        ),
+    ),
+)
 def test_running_feature_attacks_on_img(device, criterion, att_cls):
     _run_data_model_criterion_feature_attack(
-        imgdata, imgmodel, criterion, att_cls, device)
+        imgdata, imgmodel, criterion, att_cls, device
+    )
 
 
 def _run_batch_consistent(data, label, model, att_cls, idx):
@@ -209,15 +252,21 @@ def _run_batch_consistent(data, label, model, att_cls, idx):
 
 
 @pytest.mark.parametrize(
-    "idx, att_cls", itertools.product(
-        [0, BATCH_SIZE // 2, BATCH_SIZE - 1], batch_consistent_attacks))
+    "idx, att_cls",
+    itertools.product(
+        [0, BATCH_SIZE // 2, BATCH_SIZE - 1], batch_consistent_attacks
+    ),
+)
 def test_batch_consistent_on_vec(idx, att_cls):
     _run_batch_consistent(vecdata, veclabel, vecmodel, att_cls, idx)
 
 
 @pytest.mark.parametrize(
-    "idx, att_cls", itertools.product(
-        [0, BATCH_SIZE // 2, BATCH_SIZE - 1], batch_consistent_attacks))
+    "idx, att_cls",
+    itertools.product(
+        [0, BATCH_SIZE // 2, BATCH_SIZE - 1], batch_consistent_attacks
+    ),
+)
 def test_batch_consistent_on_img(idx, att_cls):
     _run_batch_consistent(imgdata, imglabel, imgmodel, att_cls, idx)
 
@@ -252,5 +301,5 @@ def test_vec_eps_consistent(att_cls):
     _run_vec_eps_consistent(vecdata, veclabel, vecmodel, att_cls)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     pass
