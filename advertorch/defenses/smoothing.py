@@ -82,7 +82,8 @@ class AverageSmoothing2D(ConvSmoothing2D):
 
     def __init__(self, channels, kernel_size):
         kernel = torch.ones((channels, 1, kernel_size, kernel_size)) / (
-                kernel_size * kernel_size)
+            kernel_size * kernel_size
+        )
         super(AverageSmoothing2D, self).__init__(kernel)
 
 
@@ -93,11 +94,18 @@ def _generate_conv2d_from_smoothing_kernel(kernel):
     if _is_even(kernel_size):
         raise NotImplementedError(
             "Even number kernel size not supported yet, kernel_size={}".format(
-                kernel_size))
+                kernel_size
+            )
+        )
 
     filter_ = nn.Conv2d(
-        in_channels=channels, out_channels=channels, kernel_size=kernel_size,
-        groups=channels, padding=kernel_size // 2, bias=False)
+        in_channels=channels,
+        out_channels=channels,
+        kernel_size=kernel_size,
+        groups=channels,
+        padding=kernel_size // 2,
+        bias=False,
+    )
 
     filter_.weight.data = kernel
     filter_.weight.requires_grad = False
@@ -111,12 +119,13 @@ def _generate_gaussian_kernel(sigma, channels, kernel_size=None):
     vecx = torch.arange(kernel_size).float()
     vecy = torch.arange(kernel_size).float()
     gridxy = _meshgrid(vecx, vecy)
-    mean = (kernel_size - 1) / 2.
+    mean = (kernel_size - 1) / 2.0
     var = sigma ** 2
 
     gaussian_kernel = (
-            1. / (2. * math.pi * var) *
-            torch.exp(-(gridxy - mean).pow(2).sum(dim=0) / (2 * var))
+        1.0
+        / (2.0 * math.pi * var)
+        * torch.exp(-(gridxy - mean).pow(2).sum(dim=0) / (2 * var))
     )
 
     gaussian_kernel /= torch.sum(gaussian_kernel)

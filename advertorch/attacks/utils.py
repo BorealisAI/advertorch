@@ -11,6 +11,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import collections
 import numpy as np
 import torch
 
@@ -32,6 +33,9 @@ def zero_gradients(x):
         if x.grad is not None:
             x.grad.detach_()
             x.grad.zero_()
+    elif isinstance(x, collections.abc.Iterable):
+        for elem in x:
+            zero_gradients(elem)
 
 
 def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
@@ -59,7 +63,8 @@ def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
         delta.data = clamp_by_pnorm(delta.data, ord, eps)
     elif ord == 1:
         ini = laplace.Laplace(
-            loc=delta.new_tensor(0), scale=delta.new_tensor(1))
+            loc=delta.new_tensor(0), scale=delta.new_tensor(1)
+        )
         delta.data = ini.sample(delta.data.shape)
         delta.data = normalize_by_pnorm(delta.data, p=1)
         ray = uniform.Uniform(0, eps).sample()
@@ -69,8 +74,7 @@ def rand_init_delta(delta, x, ord, eps, clip_min, clip_max):
         error = "Only ord = inf, ord = 1 and ord = 2 have been implemented"
         raise NotImplementedError(error)
 
-    delta.data = clamp(
-        x + delta.data, min=clip_min, max=clip_max) - x
+    delta.data = clamp(x + delta.data, min=clip_min, max=clip_max) - x
     return delta.data
 
 
@@ -104,8 +108,8 @@ class AttackConfig(object):
 
 
 def multiple_mini_batch_attack(
-        adversary, loader, device="cuda", save_adv=False,
-        norm=None, num_batch=None):
+    adversary, loader, device="cuda", save_adv=False, norm=None, num_batch=None
+):
     lst_label = []
     lst_pred = []
     lst_advpred = []
@@ -116,13 +120,16 @@ def multiple_mini_batch_attack(
         norm = _norm_convert_dict[norm]
 
     if norm == "inf":
+
         def dist_func(x, y):
             return (x - y).view(x.size(0), -1).max(dim=1)[0]
+
     elif norm == 1 or norm == 2:
         from advertorch.utils import _get_norm_batch
 
         def dist_func(x, y):
             return _get_norm_batch(x - y, norm)
+
     else:
         assert norm is None
 
@@ -143,8 +150,12 @@ def multiple_mini_batch_attack(
         if idx_batch == num_batch:
             break
 
-    return torch.cat(lst_label), torch.cat(lst_pred), torch.cat(lst_advpred), \
-           torch.cat(lst_dist) if norm is not None else None
+    return (
+        torch.cat(lst_label),
+        torch.cat(lst_pred),
+        torch.cat(lst_advpred),
+        torch.cat(lst_dist) if norm is not None else None,
+    )
 
 
 class MarginalLoss(_Loss):
@@ -174,8 +185,9 @@ class MarginalLoss(_Loss):
 
 
 class ChooseBestAttack(Attack, LabelMixin):
-    def __init__(self, predict, base_adversaries, loss_fn=None,
-                 targeted=False):
+    def __init__(
+        self, predict, base_adversaries, loss_fn=None, targeted=False
+    ):
         self.predict = predict
         self.base_adversaries = base_adversaries
         self.loss_fn = loss_fn
@@ -221,5 +233,9 @@ def attack_whole_dataset(adversary, loader, device="cuda"):
         lst_pred.append(pred)
         lst_advpred.append(advpred)
         lst_adv.append(adv)
-    return torch.cat(lst_adv), torch.cat(lst_label), torch.cat(lst_pred), \
-           torch.cat(lst_advpred)
+    return (
+        torch.cat(lst_adv),
+        torch.cat(lst_label),
+        torch.cat(lst_pred),
+        torch.cat(lst_advpred),
+    )
