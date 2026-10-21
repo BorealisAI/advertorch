@@ -39,6 +39,7 @@ from advertorch.attacks import LinfFABAttack
 from advertorch.attacks import L2FABAttack
 from advertorch.attacks import L1FABAttack
 from advertorch.attacks import DeepfoolLinfAttack
+from advertorch.attacks import ChooseBestAttack
 from advertorch.utils import CarliniWagnerLoss
 from advertorch.utils import torch_allclose
 
@@ -299,6 +300,14 @@ def _run_vec_eps_consistent(data, label, model, att_cls):
 @pytest.mark.parametrize("att_cls", vec_eps_attacks)
 def test_vec_eps_consistent(att_cls):
     _run_vec_eps_consistent(vecdata, veclabel, vecmodel, att_cls)
+
+
+def test_choose_best_attack_keeps_unimproved_inputs():
+    # eps=0 never increases the loss, so the original input must be returned
+    noop_adversary = GradientSignAttack(vecmodel, eps=0.)
+    adversary = ChooseBestAttack(vecmodel, [noop_adversary])
+    adv = adversary.perturb(vecdata, veclabel)
+    assert torch_allclose(adv, vecdata)
 
 
 if __name__ == "__main__":

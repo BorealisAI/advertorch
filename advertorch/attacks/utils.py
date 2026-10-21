@@ -208,7 +208,7 @@ class ChooseBestAttack(Attack, LabelMixin):
 
         with torch.no_grad():
             maxloss = self.loss_fn(self.predict(x), y)
-        final_adv = torch.zeros_like(x)
+        final_adv = x.clone()
         for adversary in self.base_adversaries:
             adv = adversary.perturb(x, y)
             loss = self.loss_fn(self.predict(adv), y)
